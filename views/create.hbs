@@ -1,0 +1,204 @@
+<html lang='en'>
+    <head>
+        <link
+            rel='stylesheet'
+            href='assets/lib/bootstrap/css/bootstrap.min.css'
+        />
+        <link rel='stylesheet' href='assets/lib/font-awesome/css/all.css' />
+        <script
+            type='text/javascript'
+            src='assets/lib/filesaver/FileSaver.js'
+        ></script>
+        <script
+            type='text/javascript'
+            src='assets/lib/popper/popper.js'
+        ></script>
+        <script
+            type='text/javascript'
+            src='assets/lib/jquery/jquery-3.6.0.js'
+        ></script>
+        <script
+            type='text/javascript'
+            src='assets/lib/bootstrap/js/bootstrap.bundle.min.js'
+        ></script>
+        <title>Document</title>
+    </head>
+    <body>
+        <div class='container h-100 w-100 p-3'>
+            <h1>Create</h1>
+            <form action='/create'>
+                <!--MOVIES-->
+                <div class='p-4 border rounded'>
+                    <h2>MOVIE</h2>
+                    <div class='row mt-4'>
+                        <div class='col'>
+                            <!--NAME-->
+                            <div class='form-group'>
+                                <label for='movies-name'><h4>NAME</h4></label>
+                                <input
+                                    type='text'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie name'
+                                    id='movies-name'
+                                />
+                            </div>
+                            <!--RANK-->
+                            <div class='form-group'>
+                                <label for='movies-rank'><h4>RANK</h4></label>
+                                <input
+                                    type='number'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie rank'
+                                    id='movies-rank'
+                                />
+                            </div>
+                            <!--YEAR-->
+                            <div class='form-group'>
+                                <label for='movies-year'><h4>YEAR</h4></label>
+                                <input
+                                    type='number'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie year'
+                                    id='movies-year'
+                                    min='1700'
+                                    max='2200'
+                                />
+                            </div>
+                        </div>
+
+                        <div class='col'>
+                            <!--GENRE-->
+                            <label><h4>GENRES</h4></label>
+                            <div class='p-3 border rounded row mr-2'>
+                                <!--GENRE COLUMN 1-->
+                                <div class='col'>
+                                    <!--GENRE-ITEM-->
+                                    <div class='form-check'>
+                                        <input
+                                            class='form-check-input'
+                                            type='checkbox'
+                                            value=''
+                                            id='genre-item1'
+                                        />
+                                        <label
+                                            class='form-check-label'
+                                            for='genre-item1'
+                                        >
+                                            Genre 1
+                                        </label>
+                                    </div>
+                                </div>
+                                <!--GENRE COLUMN 2-->
+                                <div class='col'>
+                                    <!--GENRE-ITEM-->
+                                    <div class='form-check'>
+                                        <input
+                                            class='form-check-input'
+                                            type='checkbox'
+                                            value=''
+                                            id='genre-item2'
+                                        />
+                                        <label
+                                            class='form-check-label'
+                                            for='genre-item2'
+                                        >
+                                            Genre 2
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--ACTORS-->
+                <div class='p-4 border rounded'>
+                    <h2>ACTORS</h2>
+                    <div class='row mt-4'>
+                        <div class='col'>
+                            <!--NAME-->
+                            <div class='form-group'>
+                                <label for='movies-name'><h4>NAME</h4></label>
+                                <input
+                                    type='text'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie name'
+                                    id='movies-name'
+                                />
+                            </div>
+                            <!--RANK-->
+                            <div class='form-group'>
+                                <label for='movies-rank'><h4>RANK</h4></label>
+                                <input
+                                    type='number'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie rank'
+                                    id='movies-rank'
+                                />
+                            </div>
+                            <!--YEAR-->
+                            <div class='form-group'>
+                                <label for='movies-year'><h4>YEAR</h4></label>
+                                <input
+                                    type='number'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie year'
+                                    id='movies-year'
+                                    min='1700'
+                                    max='2200'
+                                />
+                            </div>
+                        </div>
+
+                        <div class='col'>
+                            <!--GENRE-->
+                            <label><h4>GENRES</h4></label>
+                            <div class='p-3 border rounded row mr-2'>
+                                <!--GENRE COLUMN 1-->
+                                <div class='col'>
+                                    <!--GENRE-ITEM-->
+                                    <div class='form-check'>
+                                        <input
+                                            class='form-check-input'
+                                            type='checkbox'
+                                            value=''
+                                            id='genre-item1'
+                                        />
+                                        <label
+                                            class='form-check-label'
+                                            for='genre-item1'
+                                        >
+                                            Genre 1
+                                        </label>
+                                    </div>
+                                </div>
+                                <!--GENRE COLUMN 2-->
+                                <div class='col'>
+                                    <!--GENRE-ITEM-->
+                                    <div class='form-check'>
+                                        <input
+                                            class='form-check-input'
+                                            type='checkbox'
+                                            value=''
+                                            id='genre-item2'
+                                        />
+                                        <label
+                                            class='form-check-label'
+                                            for='genre-item2'
+                                        >
+                                            Genre 2
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--FINAL SUBMIT-->
+                <button type='submit' class='btn btn-primary'>Submit</button>
+            </form>
+        </div>
+
+    </body>
+</html>
