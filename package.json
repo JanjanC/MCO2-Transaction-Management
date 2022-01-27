@@ -1,0 +1,25 @@
+{
+  "name": "mco2-transaction-management",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JanjanC/MCO2-Transaction-Management.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JanjanC/MCO2-Transaction-Management/issues"
+  },
+  "homepage": "https://github.com/JanjanC/MCO2-Transaction-Management#readme",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "dotenv": "^14.3.2",
+    "express": "^4.17.2",
+    "hbs": "^4.2.0"
+  }
+}
