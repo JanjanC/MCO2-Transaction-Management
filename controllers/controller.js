@@ -1,5 +1,11 @@
+const db = require('../models/db.js');
+
 const controller = {
     getIndex: function (req, res) {
+        query = 'SELECT * FROM test';
+        db.query(query, function (result) {
+            console.log(result);
+        });
         res.render('index');
     },
 

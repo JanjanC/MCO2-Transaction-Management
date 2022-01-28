@@ -1,0 +1,63 @@
+<html lang='en'>
+    <head>
+        <link
+            rel='stylesheet'
+            href='assets/lib/bootstrap/css/bootstrap.min.css'
+        />
+        <link rel='stylesheet' href='assets/lib/font-awesome/css/all.css' />
+        <script
+            type='text/javascript'
+            src='assets/lib/popper/popper.js'
+        ></script>
+        <script
+            type='text/javascript'
+            src='assets/lib/jquery/jquery-3.6.0.js'
+        ></script>
+        <script
+            type='text/javascript'
+            src='assets/lib/bootstrap/js/bootstrap.bundle.min.js'
+        ></script>
+        <script type='text/javascript' src='public/scripts/create.js'></script>
+        <title>View</title>
+    </head>
+    <body>
+        <div class='container h-100 w-100 p-3'>
+            <h1>{{name}}</h1>
+            <div class='p-4 border rounded'>
+                <h2>Details</h2>
+                <h3>Rank:</h3>
+                <p>{{rank}}</p>
+                <h3>Year:</h3>
+                <p>{{year}}</p>
+                <h3>Genres:</h3>
+                {{#each genres}}
+                    <ul>{{genre}}</ul>
+                {{/each}}
+            </div>
+            <div class='p-4 border rounded'>
+                <h2>Actor/s</h2>
+                {{#each actors}}
+                    <h3>First Name:</h3>
+                    <p>{{fname}}</p>
+                    <h3>Last Name:</h3>
+                    <p>{{lname}}</p>
+                    <h3>Gender:</h3>
+                    <p>{{gender}}</p>
+                {{/each}}
+            </div>
+            <div class='p-4 border rounded'>
+                <h2>Director/s</h2>
+                {{#each directors}}
+                    <h3>First Name:</h3>
+                    <p>{{fname}}</p>
+                    <h3>Last Name:</h3>
+                    <p>{{lname}}</p>
+                    <h3>Genres:</h3>
+                    {{#each genres}}
+                        <ul>{{genre}}</ul>
+                    {{/each}}
+                {{/each}}
+            </div>
+        </div>
+    </body>
+</html>

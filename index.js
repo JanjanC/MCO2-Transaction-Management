@@ -4,6 +4,8 @@ const bodyParser = require('body-parser');
 const hbs = require('hbs');
 const routes = require('./routes/routes.js');
 const path = require('path');
+const mysql = require('mysql');
+const db = require(`./models/db.js`);
 
 const app = express();
 
@@ -17,8 +19,7 @@ hbs.registerPartials(path.join(__dirname, 'views/partials'));
 
 dotenv.config();
 
-port = process.env.PORT;
-hostname = process.env.HOSTNAME;
+db.connect();
 
 app.use(express.static(path.join(__dirname)));
 
@@ -26,7 +27,7 @@ app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, '/index.html'));
 });
 
-app.listen(port, hostname, function () {
-    console.log('Server running at:');
-    console.log('http://' + hostname + `:` + port);
+app.listen(process.env.PORT, process.env.HOSTNAME, function () {
+    console.log('Server running at: ');
+    console.log('http://' + process.env.HOSTNAME + `:` + process.env.PORT);
 });
