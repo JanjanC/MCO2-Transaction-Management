@@ -1,34 +1,17 @@
 <html lang='en'>
     <head>
-        <link
-            rel='stylesheet'
-            href='assets/lib/bootstrap/css/bootstrap.min.css'
-        />
-        <link rel='stylesheet' href='assets/lib/font-awesome/css/all.css' />
-        <script
-            type='text/javascript'
-            src='assets/lib/filesaver/FileSaver.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/popper/popper.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/jquery/jquery-3.6.0.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/bootstrap/js/bootstrap.bundle.min.js'
-        ></script>
-        <script type='text/javascript' src='public/scripts/create.js'></script>
-        <title>Create</title>
+        <link rel='stylesheet' href='../assets/lib/bootstrap/css/bootstrap.min.css' />
+        <link rel='stylesheet' href='../assets/lib/font-awesome/css/all.css' />
+        <script type='text/javascript' src='../assets/lib/popper/popper.js'></script>
+        <script type='text/javascript' src='../assets/lib/jquery/jquery-3.6.0.js'></script>
+        <script type='text/javascript' src='../assets/lib/bootstrap/js/bootstrap.bundle.min.js'></script>
+        <script type='text/javascript' src='../assets/scripts/movie-validator.js'></script>
+        <title>Create Movie</title>
     </head>
     <body>
-        <div class='container h-100 w-100 p-3'>
-            <h1>CREATE</h1>
-            <form action='/create'>
-
+        <div class='container h-100 w-100 p-3 my-4'>
+            <a href='../' class='h1'><i class='fas fa-arrow-left'></i></a><span class='h1 ml-3'>CREATE MOVIE</span>
+            <form action='/create' method='post' id='form' onsubmit='return validateInput()'>
                 <!--MOVIES-->
                 <div class='p-4 my-4 border rounded' id='movies-div'>
                     <h2>MOVIE</h2>
@@ -42,18 +25,11 @@
                                     class='form-control w-75'
                                     placeholder='Enter movie name'
                                     id='movies-name'
+                                    name='movies-name'
                                 />
+                                <div class='text-danger' id='name-error'></div>
                             </div>
-                            <!--RANK-->
-                            <div class='form-group'>
-                                <label for='movies-rank'><h4>RANK</h4></label>
-                                <input
-                                    type='number'
-                                    class='form-control w-75'
-                                    placeholder='Enter movie rank'
-                                    id='movies-rank'
-                                />
-                            </div>
+
                             <!--YEAR-->
                             <div class='form-group'>
                                 <label for='movies-year'><h4>YEAR</h4></label>
@@ -62,61 +38,74 @@
                                     class='form-control w-75'
                                     placeholder='Enter movie year'
                                     id='movies-year'
+                                    name='movies-year'
                                     min='1700'
                                     max='2200'
+                                    step='1'
                                 />
+                                <div class='text-danger' id='year-error'></div>
                             </div>
+
+                            <!--RATING-->
+                            <div class='form-group'>
+                                <label for='movies-rating'><h4>RATING</h4></label>
+                                <input
+                                    type='number'
+                                    class='form-control w-75'
+                                    placeholder='Enter movie rating'
+                                    id='movies-rating'
+                                    name='movies-rating'
+                                    min='1'
+                                    max='9.9'
+                                    step='0.1'
+                                />
+                                <div class='text-danger' id='rating-error'></div>
+                            </div>
+
                         </div>
                         <div class='col'>
                             <!--GENRE-->
-                            <label><h4>GENRES</h4></label>
-                            <div class='p-3 border rounded row mr-2'>
+                            <label><h4>GENRE</h4></label>
+                            <div class='text-danger' id='genre-error'></div>
+                            <div class='p-3 border rounded row mr-2' id='genres'>
                                 <!--GENRE COLUMN 1-->
                                 <div class='col'>
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Documentary'
                                             id='movie-genre-item1'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item1'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item1'>
                                             Documentary
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Short'
                                             id='movie-genre-item2'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item2'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item2'>
                                             Short
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Comedy'
                                             id='movie-genre-item3'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item3'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item3'>
                                             Comedy
                                         </label>
                                     </div>
@@ -125,296 +114,264 @@
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Crime'
                                             id='movie-genre-item4'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item4'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item4'>
                                             Crime
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Western'
                                             id='movie-genre-item5'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item5'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item5'>
                                             Western
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Sci-Fi'
                                             id='movie-genre-item6'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item6'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item6'>
                                             Sci-Fi
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='War'
                                             id='movie-genre-item7'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item7'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item7'>
                                             War
                                         </label>
                                     </div>
                                 </div>
-
                                 <!--GENRE COLUMN 2-->
                                 <div class='col'>
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Family'
                                             id='movie-genre-item8'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item8'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item8'>
                                             Family
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Animation'
                                             id='movie-genre-item9'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item9'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item9'>
                                             Animation
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Drama'
                                             id='movie-genre-item10'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item10'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item10'>
                                             Drama
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Romance'
                                             id='movie-genre-item11'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item11'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item11'>
                                             Romance
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Action'
                                             id='movie-genre-item12'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item12'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item12'>
                                             Action
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Horror'
                                             id='movie-genre-item13'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item13'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item13'>
                                             Horror
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Musical'
                                             id='movie-genre-item14'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item14'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item14'>
                                             Musical
                                         </label>
                                     </div>
                                 </div>
-
                                 <!--GENRE COLUMN 3-->
                                 <div class='col'>
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Mystery'
                                             id='movie-genre-item15'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item15'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item15'>
                                             Mystery
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Thriller'
                                             id='movie-genre-item16'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item16'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item16'>
                                             Thriller
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Adult'
                                             id='movie-genre-item17'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item17'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item17'>
                                             Adult
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Music'
                                             id='movie-genre-item18'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item18'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item18'>
                                             Music
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Fantasy'
                                             id='movie-genre-item19'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item19'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item19'>
                                             Fantasy
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Adventure'
                                             id='movie-genre-item20'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item20'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item20'>
                                             Adventure
                                         </label>
                                     </div>
-
                                     <!--GENRE-ITEM-->
                                     <div class='form-check'>
                                         <input
                                             class='form-check-input'
-                                            type='checkbox'
-                                            value=''
+                                            type='radio'
+                                            value='Film-Noir'
                                             id='movie-genre-item21'
+                                            name='movies-genre'
                                         />
-                                        <label
-                                            class='form-check-label'
-                                            for='movie-genre-item21'
-                                        >
+                                        <label class='form-check-label' for='movie-genre-item21'>
                                             Film-Noir
                                         </label>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--DIRECTORS-->
+                <div class='p-4 mt-4 border rounded' id='directors-div'>
+                    <h2>DIRECTORS</h2>
+                    <div class='row mt-4 pb-4'>
+                        <div class='col'>
+                            <!--FIRST NAME-->
+                            <div class='form-group'>
+                                <label><h4>NAME</h4></label>
+                                <input
+                                    type='text'
+                                    class='form-control w-50'
+                                    placeholder="Enter director's name"
+                                    id='director-name'
+                                    name='director-name'
+                                />
+                                <div class='text-danger' id='director-name-error'></div>
                             </div>
                         </div>
                     </div>
@@ -423,463 +380,44 @@
                 <!--ACTORS-->
                 <div class='p-4 my-4 border rounded' id='actors-div'>
                     <h2>ACTORS</h2>
-                    <div class='row mt-4 pb-4 border-bottom'>
+                    <div class='row mt-4 pb-4'>
                         <div class='col'>
-                            <!--FIRST NAME-->
+                            <h3>Actor 1</h3>
+                            <!--NAME-->
                             <div class='form-group'>
-                                <label><h4>FIRST NAME</h4></label>
+                                <label><h4>NAME</h4></label>
                                 <input
                                     type='text'
                                     class='form-control w-75'
-                                    placeholder="Enter actor's first name"
-                                    name='director-fname'
+                                    placeholder="Enter actor's name"
+                                    id='actor1-name'
+                                    name='actor1-name'
                                 />
-                            </div>
-                            <!--LAST NAME-->
-                            <div class='form-group'>
-                                <label><h4>LAST NAME</h4></label>
-                                <input
-                                    type='text'
-                                    class='form-control w-75'
-                                    placeholder="Enter actor's last name"
-                                    name='director-lname'
-                                />
+                                <div class='text-danger' id='actor1-name-error'></div>
                             </div>
                         </div>
                         <div class='col'>
-                            <!--GENDER-->
-                            <label><h4>GENDER</h4></label>
-                            <div class='p-3 border rounded row mr-2'>
-                                <!--GENDER COLUMN 1-->
-                                <div class='col'>
-                                    <!--GENDER-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='radio'
-                                            value='M'
-                                            name='gender-item'
-                                        />
-                                        <label class='form-check-label'>
-                                            MALE
-                                        </label>
-                                    </div>
-                                </div>
-                                <!--GENDER COLUMN 2-->
-                                <div class='col'>
-                                    <!--GENDER-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='radio'
-                                            value='F'
-                                            name='gender-item'
-                                        />
-                                        <label class='form-check-label'>
-                                            FEMALE
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class='row mt-4 px-4'>
-                        <button type='button' class='btn' id='add-actor'>
-                            Add Another Actor
-                        </button>
-                    </div>
-                </div>
-
-                <!--DIRECTORS-->
-                <div class='p-4 mt-4 border rounded' id='directors-div'>
-                    <h2>DIRECTORS</h2>
-                    <div class='row mt-4 pb-4 border-bottom'>
-                        <div class='col'>
-                            <!--FIRST NAME-->
+                            <h3>Actor 2</h3>
+                            <!--NAME-->
                             <div class='form-group'>
-                                <label><h4>FIRST NAME</h4></label>
+                                <label><h4>NAME</h4></label>
                                 <input
                                     type='text'
                                     class='form-control w-75'
-                                    placeholder="Enter director's first name"
-                                    name='director-fname'
+                                    placeholder="Enter actor's name"
+                                    id='actor2-name'
+                                    name='actor2-name'
                                 />
-                            </div>
-                            <!--LAST NAME-->
-                            <div class='form-group'>
-                                <label><h4>LAST NAME</h4></label>
-                                <input
-                                    type='text'
-                                    class='form-control w-75'
-                                    placeholder="Enter director's last name"
-                                    name='director-lname'
-                                />
+                                <div class='text-danger' id='actor2-name-error'></div>
                             </div>
                         </div>
-                        <div class='col'>
-                            <!--GENRE-->
-                            <label><h4>GENRES</h4></label>
-                            <div class='p-3 border rounded row mr-2'>
-                                <!--GENRE COLUMN 1-->
-                                <div class='col'>
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item1'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item1'
-                                        >
-                                            Documentary
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item2'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item2'
-                                        >
-                                            Short
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item3'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item3'
-                                        >
-                                            Comedy
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item4'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item4'
-                                        >
-                                            Crime
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item5'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item5'
-                                        >
-                                            Western
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item6'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item6'
-                                        >
-                                            Sci-Fi
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item7'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item7'
-                                        >
-                                            War
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!--GENRE COLUMN 2-->
-                                <div class='col'>
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item8'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item8'
-                                        >
-                                            Family
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item9'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item9'
-                                        >
-                                            Animation
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item10'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item10'
-                                        >
-                                            Drama
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item11'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item11'
-                                        >
-                                            Romance
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item12'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item12'
-                                        >
-                                            Action
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item13'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item13'
-                                        >
-                                            Horror
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item14'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item14'
-                                        >
-                                            Musical
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!--GENRE COLUMN 3-->
-                                <div class='col'>
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item15'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item15'
-                                        >
-                                            Mystery
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item16'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item16'
-                                        >
-                                            Thriller
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item17'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item17'
-                                        >
-                                            Adult
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item18'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item18'
-                                        >
-                                            Music
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item19'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item19'
-                                        >
-                                            Fantasy
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item20'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item20'
-                                        >
-                                            Adventure
-                                        </label>
-                                    </div>
-
-                                    <!--GENRE-ITEM-->
-                                    <div class='form-check'>
-                                        <input
-                                            class='form-check-input'
-                                            type='checkbox'
-                                            value=''
-                                            id='director-genre-item21'
-                                        />
-                                        <label
-                                            class='form-check-label'
-                                            for='director-genre-item21'
-                                        >
-                                            Film-Noir
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class='row mt-4 px-4'>
-                        <button type='button' class='btn' id='add-director'>Add
-                            Another Director</button>
                     </div>
                 </div>
 
                 <!--SUBMIT-->
                 <div class='d-flex flex-reverse'>
                     <!--FINAL SUBMIT-->
-                    <button
-                        type='submit'
-                        class='btn btn-primary my-4 ml-auto'
-                    >Submit</button>
+                    <button type='submit' class='btn btn-primary my-4 ml-auto' id='submit'>Submit</button>
                 </div>
             </form>
         </div>

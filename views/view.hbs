@@ -1,62 +1,59 @@
 <html lang='en'>
     <head>
-        <link
-            rel='stylesheet'
-            href='assets/lib/bootstrap/css/bootstrap.min.css'
-        />
-        <link rel='stylesheet' href='assets/lib/font-awesome/css/all.css' />
-        <script
-            type='text/javascript'
-            src='assets/lib/popper/popper.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/jquery/jquery-3.6.0.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/bootstrap/js/bootstrap.bundle.min.js'
-        ></script>
-        <script type='text/javascript' src='public/scripts/create.js'></script>
-        <title>View</title>
+        <link rel='stylesheet' href='../assets/lib/bootstrap/css/bootstrap.min.css' />
+        <link rel='stylesheet' href='../assets/lib/font-awesome/css/all.css' />
+        <script type='text/javascript' src='../assets/lib/popper/popper.js'></script>
+        <script type='text/javascript' src='../assets/lib/jquery/jquery-3.6.0.js'></script>
+        <script type='text/javascript' src='../assets/lib/bootstrap/js/bootstrap.bundle.min.js'></script>
+        <title>Movie Details</title>
     </head>
     <body>
-        <div class='container h-100 w-100 p-3'>
-            <h1>{{name}}</h1>
-            <div class='p-4 border rounded'>
-                <h2>Details</h2>
-                <h3>Rank:</h3>
-                <p>{{rank}}</p>
-                <h3>Year:</h3>
-                <p>{{year}}</p>
-                <h3>Genres:</h3>
-                {{#each genres}}
-                    <ul>{{genre}}</ul>
-                {{/each}}
+        <div class='container h-100 w-100 p-3 my-4'>
+            <a href='../' class='h1'><i class='fas fa-arrow-left'></i></a><span class='h1 ml-3'>{{name}}</span>
+            <h2 class='text-info mt-4'>MOVIE DETAILS</h2>
+            <div class='p-4 border rounded mb-4 row'>
+                <div class='col'>
+                    <h4>ID:</h4>
+                    <h5 class='ml-3'>{{id}}</h5>
+                    <h4>Year:</h4>
+                    <h5 class='ml-3'>{{year}}</h5>
+                    <h4>Rating:</h4>
+                    {{#if rating}}<h5 class='ml-3'>{{rating}}</h5>{{/if}}
+                    {{#unless rating}}<h5 class='ml-3'>N/A</h5>{{/unless}}
+                </div>
+                <div class='col'>
+                    <h4>Genre:</h4>
+                    {{#if genre}}<h5 class='ml-3'>{{genre}}</h5>{{/if}}
+                    {{#unless genre}}<h5 class='ml-3'>N/A</h5>{{/unless}}
+                </div>
             </div>
-            <div class='p-4 border rounded'>
-                <h2>Actor/s</h2>
-                {{#each actors}}
-                    <h3>First Name:</h3>
-                    <p>{{fname}}</p>
-                    <h3>Last Name:</h3>
-                    <p>{{lname}}</p>
-                    <h3>Gender:</h3>
-                    <p>{{gender}}</p>
-                {{/each}}
+
+            <h2 class='text-info'>DIRECTOR</h2>
+            <div class='p-4 border rounded mb-4 row'>
+                <div class='col'>
+                    <h4>Name:</h4>
+                    {{#if director}}<h5 class='ml-3'>{{director}}</h5>{{/if}}
+                    {{#unless director}}<h5 class='ml-3'>N/A</h5>{{/unless}}
+                </div>
             </div>
-            <div class='p-4 border rounded'>
-                <h2>Director/s</h2>
-                {{#each directors}}
-                    <h3>First Name:</h3>
-                    <p>{{fname}}</p>
-                    <h3>Last Name:</h3>
-                    <p>{{lname}}</p>
-                    <h3>Genres:</h3>
-                    {{#each genres}}
-                        <ul>{{genre}}</ul>
-                    {{/each}}
-                {{/each}}
+
+            <h2 class='text-info'>ACTORS</h2>
+            <div class='p-4 border rounded mb-3 row'>
+                <div class='col'>
+                    <h4>Actor 1 Name:</h4>
+                    {{#if actor_1}}<h5 class='ml-3'>{{actor_1}}</h5>{{/if}}
+                    {{#unless actor_1}}<h5 class='ml-3'>N/A</h5>{{/unless}}
+                </div>
+                <div class='col'>
+                    <h4>Actor 2 Name:</h4>
+                    {{#if actor_2}}<h5 class='ml-3'>{{actor_2}}</h5>{{/if}}
+                    {{#unless actor_2}}<h5 class='ml-3'>N/A</h5>{{/unless}}
+                </div>
+            </div>
+
+            <div class='d-flex flex-row-reverse'>
+                <a href='../edit/{{id}}' class='btn btn-primary btn-lg ml-2'>Edit</a>
+                <a href='../delete/{{id}}' class='btn btn-danger btn-lg'>Delete</a>
             </div>
         </div>
     </body>

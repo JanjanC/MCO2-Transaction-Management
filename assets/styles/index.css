@@ -1,0 +1,8 @@
+.movie-item {
+    cursor: pointer;
+}
+
+.movie-item:hover {
+    background-color: rgba(80, 102, 134, 0.1);
+    transition: 0.2s;
+}

@@ -2,15 +2,23 @@ const db = require('../models/db.js');
 
 const controller = {
     getIndex: function (req, res) {
-        query = 'SELECT * FROM test';
-        db.query(query, function (result) {
-            console.log(result);
+        db.find(['*'], [], function (result) {
+            if (result) {
+                res.render('index', { movies: result });
+            } else {
+                res.redirect('/error');
+            }
         });
-        res.render('index');
     },
 
     getViewPage: function (req, res) {
-        res.render('view');
+        db.find(['*'], [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
+            if (result) {
+                res.render('view', result[0]);
+            } else {
+                res.redirect('/error');
+            }
+        });
     },
 
     getCreatePage: function (req, res) {
@@ -18,7 +26,81 @@ const controller = {
     },
 
     getEditPage: function (req, res) {
-        res.render('edit');
+        db.find(['*'], [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
+            if (result) {
+                if (result[0].genre) {
+                    let genre = result[0].genre.replace('-', '').replace(' ', '').toLowerCase();
+                    result[0][genre] = result[0].genre;
+                }
+                if (result) {
+                    res.render('edit', result[0]);
+                }
+            } else {
+                res.redirect('/error');
+            }
+        });
+    },
+
+    getDelete: function (req, res) {
+        db.delete(req.params.movie_id, function (result) {
+            if (result) {
+                res.redirect('/');
+            } else {
+                res.redirect('/error');
+            }
+        });
+    },
+
+    getSearchMovies: function (req, res) {
+        db.find(['*'], [`${db.columns.name} LIKE '%${req.query.movie_name}%'`], function (result) {
+            if (result) {
+                res.render('index', { movies: result });
+            } else {
+                res.redirect('/error');
+            }
+        });
+    },
+
+    getError: function (req, res) {
+        res.render('error');
+    },
+
+    postCreate: function (req, res) {
+        db.insert(
+            req.body['movies-name'],
+            req.body['movies-year'],
+            req.body['movies-rating'],
+            req.body['movies-genre'],
+            req.body['director-name'],
+            req.body['actor1-name'],
+            req.body['actor2-name'],
+            function (result) {
+                if (result) {
+                    res.redirect('/view/' + result.insertId);
+                } else {
+                    res.redirect('/error');
+                }
+            }
+        );
+    },
+
+    postEdit: function (req, res) {
+        const values = {};
+        values[db.columns.name] = req.body['movies-name'];
+        values[db.columns.year] = req.body['movies-year'];
+        values[db.columns.rating] = req.body['movies-rating'];
+        values[db.columns.genre] = req.body['movies-genre'];
+        values[db.columns.director] = req.body['director-name'];
+        values[db.columns.actor_1] = req.body['actor1-name'];
+        values[db.columns.actor_2] = req.body['actor2-name'];
+
+        db.update(values, [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
+            if (result) {
+                res.redirect('/view/' + req.params.movie_id);
+            } else {
+                res.redirect('/error');
+            } //send error or smth
+        });
     },
 };
 

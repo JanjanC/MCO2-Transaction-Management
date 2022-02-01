@@ -1,32 +1,82 @@
 <html lang='en'>
     <head>
-        <link
-            rel='stylesheet'
-            href='assets/lib/bootstrap/css/bootstrap.min.css'
-        />
-        <link rel='stylesheet' href='assets/lib/font-awesome/css/all.css' />
-        <script
-            type='text/javascript'
-            src='assets/lib/popper/popper.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/jquery/jquery-3.6.0.js'
-        ></script>
-        <script
-            type='text/javascript'
-            src='assets/lib/bootstrap/js/bootstrap.bundle.min.js'
-        ></script>
+        <link rel='stylesheet' href='../assets/lib/bootstrap/css/bootstrap.min.css' />
+        <link rel='stylesheet' href='../assets/lib/datatables/css/jquery.dataTables.min.css' />
+        <link rel='stylesheet' type='text/css' href='../assets/lib/datatables/datatables.css' />
+
+        <link rel='stylesheet' href='../assets/lib/font-awesome/css/all.css' />
+        <link rel='stylesheet' href='../assets/styles/index.css' />
+
+        <script type='text/javascript' src='../assets/lib/popper/popper.js'></script>
+        <script type='text/javascript' src='../assets/lib/jquery/jquery-3.6.0.js'></script>
+        <script type='text/javascript' src='../assets/lib/bootstrap/js/bootstrap.bundle.min.js'></script>
+        <script type='text/javascript' src='../assets/lib/datatables/datatables.js'></script>
+
+        <script type='text/javascript' src='../assets/scripts/index.js'></script>
         <title>Document</title>
     </head>
     <body>
         <div class='container h-100 w-100 p-5'>
-            <h1 class='text-center'>STADVDB</h1>
-            <div class='d-flex justify-content-center mt-3'>
-                <a href='view' class='btn btn-primary mx-2'>View</a>
-                <a href='create' class='btn btn-primary mx-2'>Create</a>
-                <a href='edit' class='btn btn-primary mx-2'>Edit</a>
+            {{! <h1 class='text-center mb-4'>STADVDB</h1> }}
+            {{! <!--SEARCH BOX-->
+            <form action="search" method="get">
+                <div>
+                    <div class='input-group input-group-lg mt-4 w-75 mx-auto'>
+                        <span class='h3 mb-0 my-auto mr-3'>SEARCH</span>
+                        <input id="moviename" name="movie_name" type='text' class='form-control'></input>
+                        <div class="input-group-append">
+                            <button type="submit" class='btn btn-primary'><i
+                                class='fas fa-search'
+                            ></i></button>                            
+                        </div>    
+
+                        <!--CREATE-->
+                        <a href="create" class="ml-3"><i class="far fa-plus-square fa-3x"></i></a>   
+                    </div>                                 
+                </div>
+            </form>   }}
+
+            <!--CREATE-->
+            <div class='text-right mb-5'>
+                <a href='create' class='ml-3'><i class='far fa-plus-square fa-3x'></i></a>
             </div>
+
+            <!--List of movies-->
+            <table class='table' id='results'>
+                <!--TABLE HEADER-->
+                <thead>
+                    <tr>
+                        <th scope='col'>ID</th>
+                        <th scope='col'>Movie Name</th>
+                        <th scope='col'>Year</th>
+                        <th scope='col'>Rating</th>
+                        <th scope='col'>Genre</th>
+                        <th scope='col'>Director</th>
+                        <th scope='col'>Actor 1</th>
+                        <th scope='col'>Actor 2</th>
+                    </tr>
+                </thead>
+                <!--TABLE CONTENT-->
+                {{#if movies}}
+                    <tbody>
+                        {{#each movies}}
+                            <tr class='movie-item' onclick="window.location.href = '/view/{{this.id}}';">
+                                <th scope='row'>{{this.id}}</th>
+                                <td>{{this.name}}</td>
+                                <td>{{this.year}}</td>
+                                <td>{{this.rating}}</td>
+                                <td>{{this.genre}}</td>
+                                <td>{{this.director}}</td>
+                                <td>{{this.actor_1}}</td>
+                                <td>{{this.actor_2}}</td>
+                            </tr>
+                        {{/each}}
+                    </tbody>
+                {{/if}}
+            </table>
+            {{#unless movies}}
+                <h3 class='p-3 text-center text-muted'>No Results</h3>
+            {{/unless}}
         </div>
     </body>
 </html>
