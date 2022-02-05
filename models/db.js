@@ -1,5 +1,6 @@
 const mysql = require('mysql');
 const dotenv = require('dotenv');
+const util = require('util');
 
 dotenv.config();
 
@@ -29,18 +30,6 @@ const NODE_3 = {
 
 var connection;
 
-switch (process.env.NODE) {
-    case '1':
-        connection = mysql.createConnection(NODE_1);
-        break;
-    case '2':
-        connection = mysql.createConnection(NODE_2);
-        break;
-    case '3':
-        connection = mysql.createConnection(NODE_3);
-        break;
-}
-
 const db = {
     columns: {
         id: 'id',
@@ -53,80 +42,217 @@ const db = {
         actor_2: 'actor_2',
     },
 
-    connect: function () {
+    connect: function (callback) {
+        switch (process.env.NODE) {
+            case '1':
+                connection = mysql.createConnection(NODE_1);
+                break;
+            case '2':
+                connection = mysql.createConnection(NODE_2);
+                break;
+            case '3':
+                connection = mysql.createConnection(NODE_3);
+                break;
+        }
         connection.connect();
+        connection.query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;', function (error, result) {
+            console.log('during');
+            callback();
+        });
     },
 
     query: function (query, callback) {
-        connection.query(query, function (error, result) {
+        connection.beginTransaction(function (error) {
             if (error) throw error;
-            return callback(result);
+
+            connection.query(query, function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
         });
     },
 
     insert: function (name, year, rating, genre, director, actor_1, actor_2, callback) {
-        rating = rating ? rating : 'NULL';
-        genre = genre ? `'${genre}'` : 'NULL';
-        actor_1 = actor_1 ? `'${actor_1}'` : 'NULL';
-        actor_2 = actor_2 ? `'${actor_2}'` : 'NULL';
-        director = director ? `'${director}'` : 'NULL';
+        rating = rating ? rating : null;
+        genre = genre ? genre : null;
+        actor_1 = actor_1 ? actor_1 : null;
+        actor_2 = actor_2 ? actor_2 : null;
+        director = director ? director : null;
 
-        const query = `INSERT INTO movies (name, year, rating, genre, director, actor_1, actor_2) VALUES ('${name}', ${year}, ${rating}, ${genre}, ${director}, ${actor_1}, ${actor_2});`;
-        connection.query(query, function (error, result) {
+        connection.beginTransaction(function (error) {
             if (error) throw error;
-            console.log('INSERT RESULT IS: ' + JSON.stringify(result));
-            return callback(result);
+
+            const query =
+                'INSERT INTO movies (name, year, rating, genre, director, actor_1, actor_2) VALUES (?, ?, ?, ?, ?, ?, ?);';
+
+            connection.query(query, [name, year, rating, genre, director, actor_1, actor_2], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    console.log('INSERT RESULT IS: ' + JSON.stringify(result));
+                    return callback(result);
+                });
+            });
         });
     },
 
-    find: function (projection, conditions, callback) {
-        const query = `
-            SELECT ${projection.reduce(function (string, curr) {
-                if (string != '') string += ' ';
-                return string + curr;
-            }, '')}
-            FROM movies
-            ${conditions.reduce(function (string, curr) {
-                if (string != '') string += ' AND\n';
-                else string += 'WHERE ';
-                return string + curr;
-            }, '')};
-        `;
-        connection.query(query, function (error, result) {
+    find: function (id, callback) {
+        connection.beginTransaction(function (error) {
             if (error) throw error;
-            return callback(result);
+
+            const query = 'SELECT * FROM movies WHERE id = ?';
+            connection.query(query, [id], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
         });
     },
 
-    update: function (values, conditions, callback) {
-        for (let i in values) if (!values[i]) delete values[i];
-        const query = `
-            UPDATE movies
-            SET ${Object.keys(values).reduce(function (string, key) {
-                if (string != '') string += ', ';
-                if (typeof values[key] == 'string') values[key] = `'${values[key]}'`;
-                return string + key + ' = ' + values[key];
-            }, '')}
-            ${conditions.reduce(function (string, curr) {
-                if (string != '') string += ' AND\n';
-                else string += 'WHERE ';
-                return string + curr;
-            }, '')};
-        `;
-        connection.query(query, function (error, result) {
+    findAll: function (callback) {
+        connection.beginTransaction(function (error) {
             if (error) throw error;
-            return callback(result);
+
+            const query = 'SELECT * FROM movies';
+            connection.query(query, function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
+        });
+    },
+
+    searchMovie: function (name, callback) {
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            name = `%${name}%`;
+            const query = 'SELECT * FROM movies WHERE name LIKE ?';
+            connection.query(query, [name], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+                console.log(this.sql);
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
+        });
+    },
+
+    update: function (id, name, year, rating, genre, director, actor_1, actor_2, callback) {
+        rating = rating ? rating : null;
+        genre = genre ? genre : null;
+        actor_1 = actor_1 ? actor_1 : null;
+        actor_2 = actor_2 ? actor_2 : null;
+        director = director ? director : null;
+
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            const query =
+                'UPDATE movies SET name = ?, year = ?, rating = ?, genre = ?, director = ?, actor_1 = ?, actor_2 = ? WHERE id = ?';
+            connection.query(
+                query,
+                [name, year, rating, genre, director, actor_1, actor_2, id],
+                function (error, result) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    connection.commit(function (error) {
+                        if (error) {
+                            return connection.rollback(function () {
+                                throw error;
+                            });
+                        }
+
+                        return callback(result);
+                    });
+                }
+            );
         });
     },
 
     delete: function (id, callback) {
-        const query = `
-            DELETE FROM movies 
-            WHERE id = ${id};
-        `;
-        connection.query(query, function (error, result) {
+        connection.beginTransaction(function (error) {
             if (error) throw error;
-            return callback(result);
+
+            const query = 'DELETE FROM movies WHERE id = ?;';
+            connection.query(query, [id], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
         });
     },
 };

@@ -2,7 +2,7 @@ const db = require('../models/db.js');
 
 const controller = {
     getIndex: function (req, res) {
-        db.find(['*'], [], function (result) {
+        db.findAll(function (result) {
             if (result) {
                 res.render('index', { movies: result });
             } else {
@@ -12,7 +12,7 @@ const controller = {
     },
 
     getViewPage: function (req, res) {
-        db.find(['*'], [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
+        db.find(req.params.movie_id, function (result) {
             if (result) {
                 res.render('view', result[0]);
             } else {
@@ -26,7 +26,7 @@ const controller = {
     },
 
     getEditPage: function (req, res) {
-        db.find(['*'], [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
+        db.find(req.params.movie_id, function (result) {
             if (result) {
                 if (result[0].genre) {
                     let genre = result[0].genre.replace('-', '').replace(' ', '').toLowerCase();
@@ -52,7 +52,7 @@ const controller = {
     },
 
     getSearchMovies: function (req, res) {
-        db.find(['*'], [`${db.columns.name} LIKE '%${req.query.movie_name}%'`], function (result) {
+        db.searchMovie(req.query.movie_name, function (result) {
             if (result) {
                 res.render('index', { movies: result });
             } else {
@@ -85,22 +85,32 @@ const controller = {
     },
 
     postEdit: function (req, res) {
-        const values = {};
-        values[db.columns.name] = req.body['movies-name'];
-        values[db.columns.year] = req.body['movies-year'];
-        values[db.columns.rating] = req.body['movies-rating'];
-        values[db.columns.genre] = req.body['movies-genre'];
-        values[db.columns.director] = req.body['director-name'];
-        values[db.columns.actor_1] = req.body['actor1-name'];
-        values[db.columns.actor_2] = req.body['actor2-name'];
+        // const values = {};
+        // values[db.columns.name] = req.body['movies-name'];
+        // values[db.columns.year] = req.body['movies-year'];
+        // values[db.columns.rating] = req.body['movies-rating'];
+        // values[db.columns.genre] = req.body['movies-genre'];
+        // values[db.columns.director] = req.body['director-name'];
+        // values[db.columns.actor_1] = req.body['actor1-name'];
+        // values[db.columns.actor_2] = req.body['actor2-name'];
 
-        db.update(values, [`${db.columns.id} = ${req.params.movie_id}`], function (result) {
-            if (result) {
-                res.redirect('/view/' + req.params.movie_id);
-            } else {
-                res.redirect('/error');
-            } //send error or smth
-        });
+        db.update(
+            req.params.movie_id,
+            req.body['movies-name'],
+            req.body['movies-year'],
+            req.body['movies-rating'],
+            req.body['movies-genre'],
+            req.body['director-name'],
+            req.body['actor1-name'],
+            req.body['actor2-name'],
+            function (result) {
+                if (result) {
+                    res.redirect('/view/' + req.params.movie_id);
+                } else {
+                    res.redirect('/error');
+                } //send error or smth
+            }
+        );
     },
 };
 

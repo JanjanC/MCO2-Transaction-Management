@@ -1,5 +1,6 @@
 $(document).ready(function () {
     $('#results').DataTable({
+        searching: false,
         oLanguage: {
             sSearch: '<i class="fa fa-search" style="color:#0074d9"></i>',
             // oAria: {
