@@ -7,7 +7,12 @@ const path = require('path');
 const mysql = require('mysql');
 const db = require(`./models/db.js`);
 
+const { createServer } = require('http');
+const { Server } = require('socket.io');
+
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {});
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'assets')));
@@ -19,19 +24,18 @@ hbs.registerPartials(path.join(__dirname, 'views/partials'));
 
 dotenv.config();
 
-db.connect(function() {
+db.connect(process.env.NODE, function () {
     app.use(express.static(path.join(__dirname)));
-    
+
     app.get('/', function (req, res) {
         res.sendFile(path.join(__dirname, '/index.html'));
     });
-    
-    app.listen(process.env.PORT, process.env.HOSTNAME, function () {
+
+    app.listen(process.env.PORT || 3000, process.env.HOSTNAME, function () {
         console.log('Server running at: ');
         console.log('http://' + process.env.HOSTNAME + `:` + process.env.PORT);
     });
 });
-
 
 // VVV socket stuff
 

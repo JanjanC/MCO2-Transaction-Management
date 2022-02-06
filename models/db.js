@@ -1,31 +1,30 @@
 const mysql = require('mysql');
 const dotenv = require('dotenv');
-const util = require('util');
 
 dotenv.config();
 
 const NODE_1 = {
-    host: process.env.DB_HOSTNAME_1,
-    port: process.env.DB_PORT_1,
-    user: process.env.DB_USERNAME_1,
-    password: process.env.DB_PASSWORD_1,
-    database: process.env.DB_DBNAME_1,
+    host: 'db4free.net',
+    port: 3306,
+    user: 'g4_node_1',
+    password: 'password',
+    database: 'imdb_ijs_1',
 };
 
 const NODE_2 = {
-    host: process.env.DB_HOSTNAME_2,
-    port: process.env.DB_PORT_2,
-    user: process.env.DB_USERNAME_2,
-    password: process.env.DB_PASSWORD_2,
-    database: process.env.DB_DBNAME_2,
+    host: 'db4free.net',
+    port: 3306,
+    user: 'g4_node_2',
+    password: 'password',
+    database: 'imdb_ijs_2',
 };
 
 const NODE_3 = {
-    host: process.env.DB_HOSTNAME_3,
-    port: process.env.DB_PORT_3,
-    user: process.env.DB_USERNAME_3,
-    password: process.env.DB_PASSWORD_3,
-    database: process.env.DB_DBNAME_3,
+    host: 'db4free.net',
+    port: 3306,
+    user: 'g4_node_3',
+    password: 'password',
+    database: 'imdb_ijs_3',
 };
 
 var connection;
@@ -42,8 +41,8 @@ const db = {
         actor_2: 'actor_2',
     },
 
-    connect: function (callback) {
-        switch (process.env.NODE) {
+    connect: function (node, callback) {
+        switch (node) {
             case '1':
                 connection = mysql.createConnection(NODE_1);
                 break;
