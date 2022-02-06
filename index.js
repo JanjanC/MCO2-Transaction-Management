@@ -9,10 +9,13 @@ const db = require(`./models/db.js`);
 
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const { ioClient } = require('socket.io-client');
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {});
+// const ioConn1 = ioClient('http://linktoothersrever');
+// const ioConn2 = ioClient('http://linktootherotherserver');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'assets')));
@@ -31,9 +34,8 @@ db.connect(process.env.NODE, function () {
         res.sendFile(path.join(__dirname, '/index.html'));
     });
 
-    app.listen(process.env.PORT || 3000, process.env.HOSTNAME, function () {
-        console.log('Server running at: ');
-        console.log('http://' + process.env.HOSTNAME + `:` + process.env.PORT);
+    app.listen(process.env.PORT || 3000, function () {
+        console.log('Server running at Port ' + process.env.PORT);
     });
 });
 
