@@ -33,7 +33,7 @@ const app = express();
 // })
 
 // // should be in the db sections also to be able to check if ready
-// ioConn1.emit("2phasecommit", "query string to emit", timeoutCallback(2000, function (err, response){
+// ioConn2.emit("2phasecommit", "query string to emit", timeoutCallback(2000, function (err, response){
 
 // })
 
@@ -47,7 +47,7 @@ hbs.registerPartials(path.join(__dirname, 'views/partials'));
 
 dotenv.config();
 
-db.connect(process.env.NODE, function () {
+db.connect(process.env.NODE_NUM, function () {
     app.use(express.static(path.join(__dirname)));
 
     app.get('/', function (req, res) {

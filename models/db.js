@@ -42,7 +42,17 @@ const db = {
     },
 
     connect: function (node, callback) {
-        connection = mysql.createConnection(NODE_1);
+        switch (node) {
+            case '1':
+                connection = mysql.createConnection(NODE_1);
+                break;
+            case '2':
+                connection = mysql.createConnection(NODE_2);
+                break;
+            case '3':
+                connection = mysql.createConnection(NODE_3);
+                break;
+        }
         connection.connect();
         connection.query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;', function (error, result) {
             console.log('during');
