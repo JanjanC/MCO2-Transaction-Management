@@ -9,13 +9,33 @@ const db = require(`./models/db.js`);
 
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-const { ioClient } = require('socket.io-client');
+const { io } = require('socket.io-client');
+const timeoutCallback = require('timeout-callback');
 
 const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {});
-// const ioConn1 = ioClient('http://linktoothersrever');
-// const ioConn2 = ioClient('http://linktootherotherserver');
+// const httpServer = createServer(app);
+// const ioServer = new Server(httpServer, {});
+// const ioConn1 = io('http://linktoothersrever');
+// const ioConn2 = io('http://linktootherotherserver');
+
+// // should be in the insert part of db
+// var connections = 0;
+// ioServer.on('connect', function() { connections++; });
+// ioServer.on('disconnect', function() { connections--; });
+
+// ioServer.on("2phasecommit", function(queryString, callback) {
+//    callback({status: "READY"})
+// }));
+
+// // should be in the db sections also to be able to check if ready
+// ioConn1.emit("2phasecommit", "query string to emit", timeoutCallback(2000, function (err, response){
+
+// })
+
+// // should be in the db sections also to be able to check if ready
+// ioConn1.emit("2phasecommit", "query string to emit", timeoutCallback(2000, function (err, response){
+
+// })
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'assets')));
