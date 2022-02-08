@@ -83,7 +83,6 @@ const tc = {
                 return sendQuery(`XA COMMIT ${xid}`, year, livingSites);
             }
         }).catch(function (error) {
-            testString += "error: " + error + "\n";
             console.log(error);
         })
     },
