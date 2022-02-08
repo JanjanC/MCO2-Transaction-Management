@@ -15,6 +15,8 @@ function sendQuery (query, year, sites = Array(siteUrls.length).fill().map((n, i
         query: query,
         year: year
     }
+    if (sites.length == 0)
+        return new Error("All sites are down");
 
     //Loads the messages to be executed in a promise
     const messages = sites.map(function (nodeNum) {
