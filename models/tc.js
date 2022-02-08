@@ -7,7 +7,7 @@ var siteUrls = [];
  * @param   {Number}      year    Year of associated with query
  * @param   {Number[]}    sites   Sites to message, default all sites
 */
-function sendQuery (query, year, sites = Array(siteUrl.length).fill().map((n, i) => i)) {
+function sendQuery (query, year, sites = Array(siteUrls.length).fill().map((n, i) => i)) {
     const options = {
         timeout: 20000
     };
