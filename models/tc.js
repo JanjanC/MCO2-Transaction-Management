@@ -1,4 +1,5 @@
 const axios = require('axios');
+const util = require('util');
 
 var siteUrls = [];
 
@@ -54,7 +55,7 @@ const tc = {
         // The first phase of the two-phase commit - Sending the prepare messages to the appropriate nodes
         // res returns PromiseSettledResult
         .then(function(res) {
-            console.log("PREPARE RES: " + JSON.stringify(res))
+            console.log("PREPARE RES: " + util.inspect(res))
             // only message living sites
             for (let i = 0; i < res.length; i++)
                 if (res[i].status == "fulfilled" && res[i].value.data != "INCOMPATIBLE")
@@ -65,7 +66,7 @@ const tc = {
         })
         // The second phase of the two-phase commit - Sending the commit messages to the appropriate nodes
         .then(function(res) {
-            console.log("COMMIT RES: " + res)
+            console.log("COMMIT RES: " + util.inspect(res))
             // Check responses if abort
             let abort = false;
             for (let i = 0; i < res.length; i++) {
