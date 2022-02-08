@@ -1,13 +1,13 @@
-const axios = axios('axios')
+const axios = require('axios');
 
 var siteUrls = [];
 
 /** Sends a query to given nodes
  * @param   {String}      query   Query string to send
  * @param   {Number}      year    Year of associated with query
- * @param   {Number[]}    sites   Sites to message, default all isetes
+ * @param   {Number[]}    sites   Sites to message, default all sites
 */
-function sendQuery (query, year = null, sites = Array(siteUrl.length).fill().map((n, i) => i)) {
+function sendQuery (query, year, sites = Array(siteUrl.length).fill().map((n, i) => i)) {
     const options = {
         timeout: 20000
     };
@@ -22,10 +22,13 @@ function sendQuery (query, year = null, sites = Array(siteUrl.length).fill().map
     })
 
     //Firing Pin - Executes promises at the same time
-    return Promise.allSettled(messages)
+    return Promise.allSettled(messages);
 };
 
 const tc = {
+    /**Initializes which urls will be contacted
+     * @param   {*}   node  The node number of this site
+     */
     initialize: function(node) {
         // Order of url must match node numbering
         siteUrls = [
@@ -36,16 +39,19 @@ const tc = {
         siteUrls.splice(node - 1, 1);
     },
     
-    /** Sends a query to given nodes
-     * @param   {String}    query   Query string to send
-     * @param   {Number}    year    Year of associated with query
-    */
     sendQuery: sendQuery,
 
-    tryCommit: function (query, xid, year = null) {
+    /** Executes the two-phase commit
+     * @param   {}  query   Query to be executed, must be an XA transaction
+     * @param   {}  xid     Unique name of the transaction
+     * @param   {}  year    Year that the transaction effects
+     */
+    tryCommit: function (query, xid, year) {
         let livingSites = [];
         
         sendQuery(query, year)
+        // The first phase of the two-phase commit - Sending the prepare messages to the appropriate nodes
+        // res returns PromiseSettledResult
         .then(function(res) {
             // only message living sites
             for (let i = 0; i <= res.length; i++)
@@ -55,8 +61,9 @@ const tc = {
             // create log prepare
             return sendQuery(`XA PREPARE ${xid}`, year, livingSites);
         })
+        // The second phase of the two-phase commit - Sending the commit messages to the appropriate nodes
         .then(function(res) {
-            // check responses if abort
+            // Check responses if abort
             for (let i = 0; i <= res.length; i++) {
                 if (res[i].status == "rejected" || res[i].value.data == "ABORT" /*&& notFailed*/) {
                     abort = true;

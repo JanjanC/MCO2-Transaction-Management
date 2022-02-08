@@ -1,6 +1,6 @@
 const mysql = require('mysql');
 const dotenv = require('dotenv');
-const tc = require(`./models/tc.js`);
+const tc = require(`../models/tc.js`);
 
 dotenv.config();
 
