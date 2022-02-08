@@ -40,7 +40,7 @@ db.connect(process.env.NODE_NUM, function () {
             res.send("INCOMPATIBLE");
         // execute query
         // if not ready to commmit
-        if (readyToCommitlmao() == true) {
+        if (true) {
             // log no T
             res.send("ABORT");
         }
