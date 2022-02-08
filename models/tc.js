@@ -68,7 +68,7 @@ const tc = {
             console.log("COMMIT RES: " + res)
             testString += "COMMIT RES: " + res + "\n";
             // Check responses if abort
-            for (let i = 0; i <= res.length; i++) {
+            for (let i = 0; i < res.length; i++) {
                 if (res[i].status == "rejected" || res[i].value.data == "ABORT" /*&& notFailed*/) {
                     abort = true;
                     livingSites.splice(i, 1);
