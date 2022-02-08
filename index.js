@@ -32,7 +32,7 @@ db.connect(process.env.NODE_NUM, function () {
         res.send(tc.tryCommit("HELLO WORLD", "abc123", 1890));
     });
 
-    app.get('/send-query', function (req, res) {
+    app.post('/send-query', function (req, res) {
         console.log(req.body);
         //res.sendFile(path.join(__dirname, '/index.html'));
         if ((process.env.NODE_NUM == 2 && req.body.year >= 1980) || 
