@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/JanjanC/MCO2-Transaction-Management#readme",
   "dependencies": {
+    "axios": "^0.25.0",
     "body-parser": "^1.19.1",
     "dotenv": "^14.3.2",
     "express": "^4.17.2",
