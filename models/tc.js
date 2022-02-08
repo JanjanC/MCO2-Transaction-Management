@@ -48,11 +48,13 @@ const tc = {
      */
     tryCommit: function (query, xid, year) {
         let livingSites = [];
-        
+        let testString = "";
         sendQuery(query, year)
         // The first phase of the two-phase commit - Sending the prepare messages to the appropriate nodes
         // res returns PromiseSettledResult
         .then(function(res) {
+            console.log("PREPARE RES: " + res)
+            testString += "PREPARE RES: " + res + "\n";
             // only message living sites
             for (let i = 0; i <= res.length; i++)
                 if (res[i].status == "fulfilled" && res[i].value.data != "INCOMPATIBLE")
@@ -63,6 +65,8 @@ const tc = {
         })
         // The second phase of the two-phase commit - Sending the commit messages to the appropriate nodes
         .then(function(res) {
+            console.log("COMMIT RES: " + res)
+            testString += "COMMIT RES: " + res + "\n";
             // Check responses if abort
             for (let i = 0; i <= res.length; i++) {
                 if (res[i].status == "rejected" || res[i].value.data == "ABORT" /*&& notFailed*/) {
@@ -78,7 +82,11 @@ const tc = {
                 // write commit T to logs
                 return sendQuery(`XA COMMIT ${xid}`, year, livingSites);
             }
+        }).catch(function (error) {
+            testString += "error: " + error + "\n";
+            console.log(error);
         })
+        return testString;
     },
 }
 
