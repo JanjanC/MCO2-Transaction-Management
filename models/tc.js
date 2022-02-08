@@ -56,7 +56,7 @@ const tc = {
             console.log("PREPARE RES: " + JSON.stringify(res))
             testString += "PREPARE RES: " + res + "\n";
             // only message living sites
-            for (let i = 0; i <= res.length; i++)
+            for (let i = 0; i < res.length; i++)
                 if (res[i].status == "fulfilled" && res[i].value.data != "INCOMPATIBLE")
                     livingSites.push(i);
 
