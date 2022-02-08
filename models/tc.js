@@ -53,7 +53,7 @@ const tc = {
         // The first phase of the two-phase commit - Sending the prepare messages to the appropriate nodes
         // res returns PromiseSettledResult
         .then(function(res) {
-            console.log("PREPARE RES: " + res)
+            console.log("PREPARE RES: " + JSON.stringify(res))
             testString += "PREPARE RES: " + res + "\n";
             // only message living sites
             for (let i = 0; i <= res.length; i++)
