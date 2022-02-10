@@ -1,4 +1,5 @@
 const axios = require('axios');
+const {dbOps, promiseStat, serverStat, errorMsg: error} = require('../models/messages.js');
 const util = require('util');
 
 var siteUrls = [];
@@ -8,16 +9,17 @@ var siteUrls = [];
  * @param   {Number}      year    Year of associated with query
  * @param   {Number[]}    sites   Sites to message, default all sites
 */
-function sendQuery (query, year, sites = Array(siteUrls.length).fill().map((n, i) => i)) {
+function sendQuery (query, data, year, sites = Array(siteUrls.length).fill().map((n, i) => i)) {
+    if (sites.length == 0)
+        return [];
     const options = {
         timeout: 20000
     };
     const data = {
         query: query,
+        data: data,
         year: year
-    }
-    if (sites.length == 0)
-        return new Error("All sites are down");
+    };    
 
     //Loads the messages to be executed in a promise
     const messages = sites.map(function (nodeNum) {
@@ -45,24 +47,25 @@ const tc = {
     sendQuery: sendQuery,
 
     /** Executes the two-phase commit
-     * @param   {}  query   Query to be executed, must be an XA transaction
-     * @param   {}  xid     Unique name of the transaction
-     * @param   {}  year    Year that the transaction effects
+     * @param   {string}    query   Query to be executed, must be an XA transaction
+     * @param   {any}       data    Data to be passed for the query
+     * @param   {string}    xid     Unique name of the transaction
+     * @param   {number}    year    Year that the transaction effects
      */
-    tryCommit: function (query, xid, year) {
+    tryCommit: function (query, year, xid, queryData = {}) {
         let livingSites = [];
-        sendQuery(query, year)
+        return sendQuery(dbOps.XACOMMIT, {query: query, xid: xid, queryData: queryData}, year)
         // The first phase of the two-phase commit - Sending the prepare messages to the appropriate nodes
         // res returns PromiseSettledResult
         .then(function(res) {
             console.log("PREPARE RES: " + util.inspect(res))
             // only message living sites
             for (let i = 0; i < res.length; i++)
-                if (res[i].status == "fulfilled" && res[i].value.data != "INCOMPATIBLE")
+                if (res[i].status == promiseStat.FULFILLED && res[i].value.data != serverStat.INCOMPATIBLE)
                     livingSites.push(i);
 
             // create log prepare
-            return sendQuery(`XA PREPARE ${xid}`, year, livingSites);
+            return sendQuery(dbOps.XAPREPARE, {xid: xid}, year, livingSites);
         })
         // The second phase of the two-phase commit - Sending the commit messages to the appropriate nodes
         .then(function(res) {
@@ -70,21 +73,19 @@ const tc = {
             // Check responses if abort
             let abort = false;
             for (let i = 0; i < res.length; i++) {
-                if (res[i].status == "rejected" || res[i].value.data == "ABORT" /*&& notFailed*/) {
+                if (res[i].status == promiseStat.REJECTED || res[i].value.data == serverStat.ABORT /*&& notFailed*/) {
                     abort = true;
                     livingSites.splice(i, 1);
                 }
             }
             if (abort) {
                 // write abort T to logs
-                return sendQuery(`XA ABORT ${xid}`, year, livingSites);
+                return sendQuery(dbOps.XAROLLBACK, {xid: xid}, year, livingSites);
             }
             else {
                 // write commit T to logs
-                return sendQuery(`XA COMMIT ${xid}`, year, livingSites);
+                return sendQuery(dbOps.XACOMMIT, {xid: xid}, year, livingSites);
             }
-        }).catch(function (error) {
-            console.log(error);
         })
     },
 }
