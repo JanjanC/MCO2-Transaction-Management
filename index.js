@@ -6,6 +6,7 @@ const routes = require('./routes/routes.js');
 const path = require('path');
 const db = require(`./models/db.js`);
 const tc = require(`./models/tc.js`);
+const { serverStat, dbOps } = require('./models/messages.js');
 
 const app = express();
 
@@ -34,22 +35,67 @@ db.connect(process.env.NODE_NUM, function () {
 
     app.post('/send-query', function (req, res) {
         console.log(req.body);
-        //res.sendFile(path.join(__dirname, '/index.html'));
-        if ((process.env.NODE_NUM == 2 && req.body.year >= 1980) || 
-            (process.env.NODE_NUM == 3 && req.body.year < 1980))
-            res.send("INCOMPATIBLE");
-        // execute query
-        // if not ready to commmit
-        if (true) {
-            // log no T
-            res.send("ABORT");
+        let timeoutId;
+        let timedOut;
+        if (req.body.query == dbOps.XATRANSACTION) {
+            timedOut = false;
+            timeoutId = setTimeout(function() {
+                // if the requester doesnt send another message else in 50 second consider
+                // the first function timed out
+                timedOut = true;
+            }, 50000)
         }
+        else if (timeoutId != undefined) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(function() {
+                // if the server doesnt send something else in 20 second consider
+                // the first function timed out
+                timedOut = true;
+            }, 50000)
+        }
+
+        if (timedOut === true) {
+            // timed out means the transaction manager died
+            // roll back changes to the db
+            res.send(serverStat.TIMED_OUT);
+        }
+
+        if (req.body.year != null &&
+            (process.env.NODE_NUM == 2 && req.body.year < 1980) || 
+            (process.env.NODE_NUM == 3 && req.body.year >= 1980))
+            res.send(serverStat.INCOMPATIBLE);
+        else if (!db.status)
+            res.send(serverStat.DOWN);
         else {
-            // log ready T
-            // force all records for t into stable storage
-            res.send("READY");
+            // execute query
+            const data = req.body.data;
+            let operation;
+            switch (req.body.query) {
+                case dbOps.XATRANSACTION:
+                    operation = db.xaTransaction(data.query, data.xid, data.queryData);
+                    break;
+                case dbOps.XAPREPARE:
+                    operation = db.xaPrepare(data.xid);
+                    break;
+                case dbOps.XACOMMIT:
+                    operation = db.xaCommit(data.xid);
+                    break;
+                case dbOps.XAROLLBACK:
+                    operation = db.xaRollback(data.xid);
+                    break;
+            };
+            operation.then(function (result) {
+                // log ready T
+                // force all records for t into stable storage
+                console.log(result);
+                res.send(serverStat.READY);
+            }) 
+            .catch(function (error) {
+                // log no T
+                console.log(error);
+                res.send(serverStat.ABORT);
+            });
         }
-        // else
     });
 
     app.listen(process.env.PORT || 3000, function () {
