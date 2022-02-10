@@ -1,40 +1,40 @@
 const mysql = require('mysql');
 const dotenv = require('dotenv');
 const util = require('util');
-const tc = require(`../models/tc.js`);
 
 dotenv.config();
 
-const NODE_1 = {
-    host: 'db4free.net',
-    port: 3306,
-    user: 'g4_node_1',
-    password: 'password',
-    database: 'imdb_ijs_1',
-};
+const NODES = [
+    {
+        host: 'db4free.net',
+        port: 3306,
+        user: 'g4_node_1',
+        password: 'password',
+        database: 'imdb_ijs_1',
+    },
+    {
+        host: 'db4free.net',
+        port: 3306,
+        user: 'g4_node_2',
+        password: 'password',
+        database: 'imdb_ijs_2',
+    },
+    {
+        host: 'db4free.net',
+        port: 3306,
+        user: 'g4_node_3',
+        password: 'password',
+        database: 'imdb_ijs_3',
+    }
+];
 
-const NODE_2 = {
-    host: 'db4free.net',
-    port: 3306,
-    user: 'g4_node_2',
-    password: 'password',
-    database: 'imdb_ijs_2',
-};
-
-const NODE_3 = {
-    host: 'db4free.net',
-    port: 3306,
-    user: 'g4_node_3',
-    password: 'password',
-    database: 'imdb_ijs_3',
-};
+const SEND_INTERVAL = 5000;
+const CHECK_INTERVAL = 1000;
 
 var connection;
 var promiseQuery;
-var nodeNum;
 
 const db = {
-    status: true,
     columns: {
         id: 'id',
         name: 'name',
@@ -47,181 +47,112 @@ const db = {
     },
 
     connect: function (node, callback) {
-        nodeNum = node;
-        switch (node) {
-            case '1':
-                connection = mysql.createConnection(NODE_1);
-                break;
-            case '2':
-                connection = mysql.createConnection(NODE_2);
-                break;
-            case '3':
-                connection = mysql.createConnection(NODE_3);
-                break;
-        }
-        try {
-            connection.connect();
-            connection.query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;', function (error, result) {
-                console.log('during');
-                callback();
-            });
-            promiseQuery = util
-                .promisify(connection.query)
-                .bind(connection)
-                .catch(function (error) {
-                    // if error is because it couldnt connect
-                    this.status = false;
-                });
-            this.status = true;
-        } catch {
-            this.status = false;
-        }
+        connection = mysql.createConnection(NODES[node]);
+        connection.connect();
+        connection.query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;', function (error, result) {
+            console.log('during');
+            callback();
+        });
+
+        promiseQuery = util.promisify(connection.query).bind(connection)
+
+        setInterval(this.sendMessages, SEND_INTERVAL);
+
+        setInterval(function() {
+            let messages = await this.retreiveMessages()
+            // for each message process them
+            db.sendReponse()
+        }, CHECK_INTERVAL)
     },
 
-    xaTransaction: function (query, xid, data = {}) {
-        let xaTransaction = `
-            XA START '${xid}'
-            ${query}
-            XA END '${xid}'
-        `;
-        return promiseQuery(xaTransaction, data);
-    },
-
-    xaPrepare: function (xid) {
-        return promiseQuery(`XA PREPARE '${xid}'`);
-    },
-
-    xaCommit: function (xid) {
-        return promiseQuery(`XA COMMIT '${xid}'`);
-    },
-
-    xaRollback: function (xid) {
-        return promiseQuery(`XA ROLLBACK '${xid}'`);
+    sendMessages: function() {
+        this.find()
     },
 
     query: function (query, callback) {
-        connection.query(query, function (error, result) {
-            if (error) {
-                return connection.rollback(function () {
-                    throw error;
-                });
-            }
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
 
-            connection.commit(function (error) {
+            connection.query(query, function (error, result) {
                 if (error) {
                     return connection.rollback(function () {
                         throw error;
                     });
                 }
 
-                return callback(result);
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
             });
         });
     },
 
-    insert: async function (name, year, rating, genre, director, actor_1, actor_2) {
+    insert: function (name, year, rating, genre, director, actor_1, actor_2, callback) {
         rating = rating ? rating : null;
         genre = genre ? genre : null;
         actor_1 = actor_1 ? actor_1 : null;
         actor_2 = actor_2 ? actor_2 : null;
         director = director ? director : null;
-        const xid = new Date().toISOString();
-        const query =
-            'INSERT INTO movies (name, year, rating, genre, director, actor_1, actor_2) VALUES (?, ?, ?, ?, ?, ?, ?);';
-        if (!this.status) this.connect();
-        if ((this.status && nodeNum == 2 && req.body.year < 1980) || (nodeNum == 3 && req.body.year >= 1980)) {
-            await this.xaTransaction(query, xid);
-            await this.xaPrepare(xid);
-        }
-        //do something if theres an error here
-        try {
-            let commitRes = await Promise.all([
-                tc.tryCommit(query, year, xid, [name, year, rating, genre, director, actor_1, actor_2]),
-                this.xaCommit(xid),
-            ]);
-            return commitRes;
-        } catch (e) {
-            console.log(e);
-            this.xaRollback;
-            return e;
-        }
+
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            const query =
+                'INSERT INTO movies (name, year, rating, genre, director, actor_1, actor_2) VALUES (?, ?, ?, ?, ?, ?, ?);';
+
+            connection.query(query, [name, year, rating, genre, director, actor_1, actor_2], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    console.log('INSERT RESULT IS: ' + JSON.stringify(result));
+                    return callback(result);
+                });
+            });
+        });
     },
 
-    find: async function (id) {
-        const xid = new Date().toISOString();
-        const query = 'SELECT * FROM movies WHERE id = ?';
-        if (!this.status) this.connect();
-        if (this.status) {
-            await this.xaTransaction(query, xid);
-            await this.xaPrepare(xid);
-        }
-        try {
-            let [commitRes, localCommitRes] = await Promise.all([
-                tc.tryCommit(query, null, xid, [id]),
-                this.xaCommit(xid),
-            ]);
-            if (localCommitRes != []) return localCommitRes;
-            for (let i of commitRes) if (i != []) return i;
-        } catch (e) {
-            console.log(e);
-            this.xaRollback;
-        }
+    find: function (id, callback) {
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            const query = 'SELECT * FROM movies WHERE id = ?';
+            connection.query(query, [id], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
+        });
     },
 
-    findAll: async function (id) {
-        const xid = new Date().toISOString();
-        const query = 'SELECT * FROM movies';
-
-        //Retrieve all movies
-        if (nodeNum == 1) {
-            if (this.status) {
-                //Waits for a start transaction
-                await this.xaTransaction(query, xid);
-                //Waits for a prepare transaction
-                await this.xaPrepare(xid);       
-                //Returns a commit transaction         
-                return await this.xaCommit(xid);
-            } else {
-                try {
-                    // Returns the results of either xaRollback or xaCommit
-                    // What SQL returns after a process is accomplished
-                    let commitRes = await tc.tryCommit(query, null, xid, [id]);
-                    let result = [];
-                    
-                    for (let i of commitRes) 
-                        result.concat(i);                        
-                    return result;
-                } catch (e) {
-                    console.log(e);
-                    return [];
-                }
-            }
-        }
-        //Retrieve movies where year < 1980
-        else if (nodeNum == 2) {
-            if (this.status) {
-                await this.xaTransaction(query, xid);
-                await this.xaPrepare(xid);
-                try {
-                    let commitRes = await tc.tryCommit(query, null, xid, [id]);
-                    let localRes = await this.xaCommit(xid);
-                    let result = [];
-
-                    for (let i of commitRes) 
-                        result.concat(i);
-                    return result;
-                } catch (e) {
-                    console.log(e);
-                    this.xaRollback;
-                    return [];
-                }
-            }
-        }
-
-        if ((nodeNum == 2 && req.body.year < 1980) || (nodeNum == 3 && req.body.year >= 1980)) {
-            //EMPTY???
-        }
-
+    findAll: function (callback) {
         connection.beginTransaction(function (error) {
             if (error) throw error;
 
@@ -272,51 +203,65 @@ const db = {
         });
     },
 
-    update: function (id, name, year, rating, genre, director, actor_1, actor_2) {
+    update: function (id, name, year, rating, genre, director, actor_1, actor_2, callback) {
         rating = rating ? rating : null;
         genre = genre ? genre : null;
         actor_1 = actor_1 ? actor_1 : null;
         actor_2 = actor_2 ? actor_2 : null;
         director = director ? director : null;
-        const xid = new Date().toISOString();
-        const query =
-            'UPDATE movies SET name = ?, year = ?, rating = ?, genre = ?, director = ?, actor_1 = ?, actor_2 = ? WHERE id = ?';
-        if ((nodeNum == 2 && req.body.year < 1980) || (nodeNum == 3 && req.body.year >= 1980)) {
-            await this.xaTransaction(query, xid);
-            await this.xaPrepare(xid);
-        }
-        //do something if theres an error here
-        try {
-            let commitRes = await tc.tryCommit(query, year, xid, [
-                name,
-                year,
-                rating,
-                genre,
-                director,
-                actor_1,
-                actor_2,
-            ]);
-            await this.xaCommit;
-            return commitRes;
-        } catch (e) {
-            console.log(e);
-            this.xaRollback;
-        }
+
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            const query =
+                'UPDATE movies SET name = ?, year = ?, rating = ?, genre = ?, director = ?, actor_1 = ?, actor_2 = ? WHERE id = ?';
+            connection.query(
+                query,
+                [name, year, rating, genre, director, actor_1, actor_2, id],
+                function (error, result) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    connection.commit(function (error) {
+                        if (error) {
+                            return connection.rollback(function () {
+                                throw error;
+                            });
+                        }
+
+                        return callback(result);
+                    });
+                }
+            );
+        });
     },
 
-    delete: function (id) {
-        const xid = new Date().toISOString();
-        const query = 'DELETE FROM movies WHERE id = ?;';
-        await this.xaTransaction(query, xid);
-        await this.xaPrepare(xid);
-        try {
-            let commitRes = await tc.tryCommit(query, null, xid, [id]);
-            await this.xaCommit;
-            return commitRes;
-        } catch (e) {
-            console.log(e);
-            this.xaRollback;
-        }
+    delete: function (id, callback) {
+        connection.beginTransaction(function (error) {
+            if (error) throw error;
+
+            const query = 'DELETE FROM movies WHERE id = ?;';
+            connection.query(query, [id], function (error, result) {
+                if (error) {
+                    return connection.rollback(function () {
+                        throw error;
+                    });
+                }
+
+                connection.commit(function (error) {
+                    if (error) {
+                        return connection.rollback(function () {
+                            throw error;
+                        });
+                    }
+
+                    return callback(result);
+                });
+            });
+        });
     },
 };
 
