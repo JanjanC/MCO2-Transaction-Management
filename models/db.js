@@ -1,155 +1,73 @@
-const mysql = require('mysql');
 const dotenv = require('dotenv');
-const util = require('util');
+const { Dao } = require('../models/dao');
 
 dotenv.config();
-
-const NODES = [
-    {
-        host: 'db4free.net',
-        port: 3306,
-        user: 'g4_node_1',
-        password: 'password',
-        database: 'imdb_ijs_1',
-    },
-    {
-        host: 'db4free.net',
-        port: 3306,
-        user: 'g4_node_2',
-        password: 'password',
-        database: 'imdb_ijs_2',
-    },
-    {
-        host: 'db4free.net',
-        port: 3306,
-        user: 'g4_node_3',
-        password: 'password',
-        database: 'imdb_ijs_3',
-    }
-];
 
 const SEND_INTERVAL = 5000;
 const CHECK_INTERVAL = 1000;
 
 var connection;
-var promiseQuery;
+var dbs = {};
+var nodeNum;
 
 const db = {
-    columns: {
-        id: 'id',
-        name: 'name',
-        year: 'year',
-        rating: 'rating',
-        genre: 'genre',
-        director: 'director',
-        actor_1: 'actor_1',
-        actor_2: 'actor_2',
+    /*
+    node - the current node number of the server
+    */
+    connect: function (node) {
+        nodeNum = node;
+        for (let i = 1; i <= Dao.NODES.length; i++)
+            dbs[i] = new Dao(i - 1);
+        console.log(dbs);
+        setInterval(this.monitorOutbox, SEND_INTERVAL);
+        setInterval(this.monitorInbox, CHECK_INTERVAL);
     },
 
-    connect: function (node, callback) {
-        connection = mysql.createConnection(NODES[node]);
-        connection.connect();
-        connection.query('SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;', function (error, result) {
-            console.log('during');
-            callback();
-        });
+    async monitorInbox() {
+        const query = `SELECT * FROM ${Dao.tables.inbox} WHERE ${Dao.inbox.status} =  ?`;
+        let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]);
 
-        promiseQuery = util.promisify(connection.query).bind(connection)
-
-        setInterval(this.sendMessages, SEND_INTERVAL);
-
-        setInterval(function() {
-            let messages = await this.retreiveMessages()
-            // for each message process them
-            db.sendReponse()
-        }, CHECK_INTERVAL)
+        const acknowledgeQuery = `
+            UPDATE ${Dao.tables.outbox}
+            SET ${Dao.outbox.status} = ?
+        `;
+        //Messages contains all queued up to go transactions
+        for (let i in messages) {
+            dbs[nodeNum].query(i[Dao.inbox.message])
+            .then(function() {
+                console.log(i)
+                dbs[i[Dao.inbox.sender]].query(acknowledgeQuery, [Dao.MESSAGES.ACKNOWLEDGED]);
+            })
+        }
     },
 
-    sendMessages: function() {
-        this.find()
+    monitorOutbox: async function() {
+        const query = `SELECT message FROM ${Dao.tables.outbox} WHERE ${Dao.inbox.status} = ?;`;
+        let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]);
+        const insertQuery = `
+            INSERT INTO ${Dao.tables.outbox}(${Dao.inbox.id}, ${Dao.inbox.message}, ${Dao.inbox.sender}, ${Dao.inbox.status})
+            VALUES (?, ?, ?, ?))
+        `;
+        for (let i in messages) {
+            dbs[i[Dao.outbox.recipient]]
+            .query(insertQuery, [i[Dao.outbox.id], i[Dao.outbox.message], nodeNum]);
+        }
     },
 
-    query: function (query, callback) {
-        connection.beginTransaction(function (error) {
-            if (error) throw error;
+    insert: function (name, year, rating, genre, director, actor_1, actor_2) {
+        if (year >= 1980) {
+            if (JSON.stringify(dbs[nodeNum]) == JSON.stringify(otherDb[nodeNum])) {
+                
+            } else {
 
-            connection.query(query, function (error, result) {
-                if (error) {
-                    return connection.rollback(function () {
-                        throw error;
-                    });
-                }
-
-                connection.commit(function (error) {
-                    if (error) {
-                        return connection.rollback(function () {
-                            throw error;
-                        });
-                    }
-
-                    return callback(result);
-                });
-            });
-        });
-    },
-
-    insert: function (name, year, rating, genre, director, actor_1, actor_2, callback) {
-        rating = rating ? rating : null;
-        genre = genre ? genre : null;
-        actor_1 = actor_1 ? actor_1 : null;
-        actor_2 = actor_2 ? actor_2 : null;
-        director = director ? director : null;
-
-        connection.beginTransaction(function (error) {
-            if (error) throw error;
-
-            const query =
-                'INSERT INTO movies (name, year, rating, genre, director, actor_1, actor_2) VALUES (?, ?, ?, ?, ?, ?, ?);';
-
-            connection.query(query, [name, year, rating, genre, director, actor_1, actor_2], function (error, result) {
-                if (error) {
-                    return connection.rollback(function () {
-                        throw error;
-                    });
-                }
-
-                connection.commit(function (error) {
-                    if (error) {
-                        return connection.rollback(function () {
-                            throw error;
-                        });
-                    }
-
-                    console.log('INSERT RESULT IS: ' + JSON.stringify(result));
-                    return callback(result);
-                });
-            });
-        });
+            }
+        } else {
+            
+        }
     },
 
     find: function (id, callback) {
-        connection.beginTransaction(function (error) {
-            if (error) throw error;
-
-            const query = 'SELECT * FROM movies WHERE id = ?';
-            connection.query(query, [id], function (error, result) {
-                if (error) {
-                    return connection.rollback(function () {
-                        throw error;
-                    });
-                }
-
-                connection.commit(function (error) {
-                    if (error) {
-                        return connection.rollback(function () {
-                            throw error;
-                        });
-                    }
-
-                    return callback(result);
-                });
-            });
-        });
+        
     },
 
     findAll: function (callback) {
@@ -189,7 +107,6 @@ const db = {
                         throw error;
                     });
                 }
-                console.log(this.sql);
                 connection.commit(function (error) {
                     if (error) {
                         return connection.rollback(function () {

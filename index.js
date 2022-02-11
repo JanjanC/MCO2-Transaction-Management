@@ -5,8 +5,6 @@ const hbs = require('hbs');
 const routes = require('./routes/routes.js');
 const path = require('path');
 const db = require(`./models/db.js`);
-const tc = require(`./models/tc.js`);
-const { serverStat, dbOps } = require('./models/messages.js');
 
 const app = express();
 
@@ -19,8 +17,6 @@ app.use('/', routes);
 hbs.registerPartials(path.join(__dirname, 'views/partials'));
 
 dotenv.config();
-
-tc.initialize(process.env.NODE_NUM);
 
 db.connect(process.env.NODE_NUM, function () {
     app.use(express.static(path.join(__dirname)));
@@ -64,7 +60,7 @@ db.connect(process.env.NODE_NUM, function () {
             (process.env.NODE_NUM == 2 && req.body.year < 1980) || 
             (process.env.NODE_NUM == 3 && req.body.year >= 1980))
             res.send(serverStat.INCOMPATIBLE);
-        else if (!db.status)
+        else if (!db.isDown)
             res.send(serverStat.DOWN);
         else {
             // execute query

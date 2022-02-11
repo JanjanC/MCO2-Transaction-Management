@@ -66,6 +66,13 @@ const controller = {
     },
 
     postCreate: function (req, res) {
+
+        if (parseInt(req.body['movies-year']) >= 1980) {
+            ;
+        } else {
+            ;
+        }
+
         db.insert(
             req.body['movies-name'],
             req.body['movies-year'],
