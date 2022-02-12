@@ -10,6 +10,7 @@ const app = express();
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'assets')));
+app.use(express.static(path.join(__dirname)));
 
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
@@ -18,17 +19,21 @@ hbs.registerPartials(path.join(__dirname, 'views/partials'));
 
 dotenv.config();
 
-db.connect(process.env.NODE_NUM, function () {
-    app.use(express.static(path.join(__dirname)));
-
-    app.get('/', function (req, res) {
-        res.sendFile(path.join(__dirname, '/index.html'));
+db.connect(process.env.NODE_NUM).then(() => {
+    app.listen(process.env.PORT || 3000, function () {
+        console.log('Server running at Port ' + process.env.PORT);
     });
+});
 
-    app.get('/test', function (req, res) {
-        res.send(tc.tryCommit("HELLO WORLD", "abc123", 1890));
-    });
+// app.get('/', function (req, res) {
+//     res.sendFile(path.join(__dirname, '/index.html'));
+// });
 
+// app.get('/test', function (req, res) {
+//     res.send(tc.tryCommit("HELLO WORLD", "abc123", 1890));
+// });
+
+/*
     app.post('/send-query', function (req, res) {
         console.log(req.body);
         let timeoutId;
@@ -93,8 +98,4 @@ db.connect(process.env.NODE_NUM, function () {
             });
         }
     });
-
-    app.listen(process.env.PORT || 3000, function () {
-        console.log('Server running at Port ' + process.env.PORT);
-    });
-});
+    */
