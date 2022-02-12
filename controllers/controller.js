@@ -66,13 +66,6 @@ const controller = {
     },
 
     postCreate: function (req, res) {
-
-        if (parseInt(req.body['movies-year']) >= 1980) {
-            ;
-        } else {
-            ;
-        }
-
         db.insert(
             req.body['movies-name'],
             req.body['movies-year'],
@@ -82,8 +75,9 @@ const controller = {
             req.body['actor1-name'],
             req.body['actor2-name'],
             function (result) {
+                console.log(result);
                 if (result) {
-                    res.redirect('/view/' + result.insertId);
+                    res.redirect(`/view/${result}`);
                 } else {
                     res.redirect('/error');
                 }
