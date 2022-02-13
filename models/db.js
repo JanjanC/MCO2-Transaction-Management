@@ -106,7 +106,7 @@ async function getConnections() {
 }
 
 function releaseConnections(dbs) {
-    console.log('-------------------------------------------------> CONNEECTIONS: ' + util.inspect(dbs));
+    //console.log('-------------------------------------------------> CONNEECTIONS: ' + util.inspect(dbs));
     for (let i = 1; i <= 3; i++) if (dbs[i].connection && !dbs[i].isDown) dbs[i].connection.release();
 }
 
