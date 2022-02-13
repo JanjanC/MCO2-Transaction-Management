@@ -141,18 +141,36 @@ const db = {
             });
         };
         let queryDb2And3 = async () => {
-            await Promise.all([dbs[2].find(id), dbs[3].find(id)]);
-            return Promise.all([dbs[2].commit(), dbs[3].commit()]);
-        };
-        let allServersDown = async () => {
-            await Promise.all([dbs[1].rollback(), dbs[2].rollback(), dbs[3].rollback()]);
-            callback(false);
+            let nodesToFind = [2, 3].map(function (value) {
+                dbs[value].find(id).then(async function (result) {
+                    if (result == []) return Promise.reject('Did not find');
+                    await dbs[value].commit(id);
+                    callback(result);
+                });
+            });
+            return Promise.any(nodesToFind);
         };
 
         if (nodeNum == 1) {
-            queryDb1().catch(queryDb2And3).catch(allServersDown);
+            queryDb1()
+                .catch(async function () {
+                    await dbs[1].rollback;
+                    return queryDb2And3();
+                })
+                .catch(async function () {
+                    await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
+                    callback(false);
+                });
         } else {
-            queryDb2And3().catch(queryDb1).catch(allServersDown);
+            queryDb2And3()
+                .catch(async function () {
+                    await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
+                    return queryDb1();
+                })
+                .catch(async function () {
+                    await dbs[1].rollback();
+                    callback(false);
+                });
         }
     },
 
@@ -165,18 +183,32 @@ const db = {
             });
         };
         let queryDb2And3 = async () => {
-            await Promise.all([dbs[2].searchMovie(name), dbs[3].searchMovie(name)]);
-            return Promise.all([dbs[2].commit(), dbs[3].commit()]);
-        };
-        let allServersDown = async () => {
-            await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
-            callback(false);
+            return Promise.all([dbs[2].searchMovie(name), dbs[3].searchMovie(name)]).then(async function (result) {
+                await Promise.all([dbs[2].commit(), dbs[3].commit()]);
+                callback(result[0].concat(result[1]));
+            });
         };
 
         if (nodeNum == 1) {
-            queryDb1().catch(queryDb2And3).catch(allServersDown);
+            queryDb1()
+                .catch(async function () {
+                    await dbs[1].rollback;
+                    return queryDb2And3();
+                })
+                .catch(async function () {
+                    await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
+                    callback(false);
+                });
         } else {
-            queryDb2And3().catch(queryDb1).catch(allServersDown);
+            queryDb2And3()
+                .catch(async function () {
+                    await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
+                    return queryDb1();
+                })
+                .catch(async function () {
+                    await dbs[1].rollback();
+                    callback(false);
+                });
         }
     },
 
