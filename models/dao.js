@@ -9,7 +9,7 @@ class Dao {
             user: 'g4_node_1',
             password: 'password',
             database: 'imdb_ijs_1',
-            connectionLimit: 10,
+            connectionLimit: 30,
             connectTimeout: 5000,
         },
         {
@@ -18,7 +18,7 @@ class Dao {
             user: 'g4_node_2',
             password: 'password',
             database: 'imdb_ijs_2',
-            connectionLimit: 10,
+            connectionLimit: 30,
             connectTimeout: 5000,
         },
         {
@@ -27,7 +27,7 @@ class Dao {
             user: 'g4_node_3',
             password: 'password',
             database: 'imdb_ijs_3',
-            connectionLimit: 10,
+            connectionLimit: 30,
             connectTimeout: 5000,
         },
     ];
@@ -74,15 +74,16 @@ class Dao {
     query;
     queryString;
     node;
+    pool;
     lastSQLObject;
 
     constructor(node) {
         this.node = node;
     }
 
-    initialize(connection) {
+    initialize(pool) {
         console.log('in initialize of node #' + this.node);
-        this.connection = connection;
+        this.pool = pool;
 
         /**
          *
@@ -93,8 +94,8 @@ class Dao {
         let promiseQuery = (query, options) => {
             console.log('query in node ' + this.node + ': ' + query);
             console.log('\twith values: ' + JSON.stringify(options));
-            return new Promise((resolve, reject) => {
-                this.lastSQLObject = this.connection.query(query, options, function (error, results) {
+            return new Promise((resolve, connection) => {
+                this.lastSQLObject = this.pool.query(query, options, function (error, results) {
                     if (error) reject(error);
                     else resolve(results);
                 });
@@ -107,24 +108,25 @@ class Dao {
         let unconnectedQuery = async (query, options) => {
             console.log('fake query in node ' + this.node + ': ' + query);
             console.log('\twith values: ' + JSON.stringify(options));
-            try {
-                await this.initialize();
-                this.query = promiseQuery;
-                return promiseQuery(query, options);
-            } catch {
-                console.log('Node ' + this.node + ' failed to reconnect');
-                return Promise.reject(Dao.MESSAGES.UNCONNECTED);
-            }
+            // try {
+            //     await this.initialize();
+            //     this.query = promiseQuery;
+            //     return promiseQuery(query, options);
+            // } catch {
+            //     console.log('Node ' + this.node + ' failed to reconnect');
+            return Promise.reject(Dao.MESSAGES.UNCONNECTED);
+            //}
         };
 
         return new Promise((resolve, reject) => {
-            this.connection.getConnection((error) => {
+            this.pool.getConnection((error, conn) => {
                 if (error) {
                     console.log('Node ' + this.node + ' errored in connecting: ' + error.message + ' ' + error.errno);
                     if (this.query == undefined) this.query = unconnectedQuery;
                     this.isDown = true;
                     reject(Dao.MESSAGES.UNCONNECTED);
                 } else {
+                    this.connection = conn;
                     this.query = promiseQuery;
                     this.isDown = false;
                     resolve(Dao.MESSAGES.CONNECTED);

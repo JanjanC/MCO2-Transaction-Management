@@ -96,21 +96,18 @@ async function monitorInbox() {
 
 async function getConnections() {
     let dbs = {};
+    let inits = [];
     for (let i = 1; i <= 3; i++) {
         dbs[i] = new Dao(i - 1);
-        try {
-            await dbs[i].initialize(pools[i - 1]);
-        }
-        catch (error) {
-            console.log(error);
-        }
+        inits.push(dbs[i].initialize(pools[i - 1]));
     }
+    await Promise.allSettled(inits);
     return dbs;
 }
 
 function releaseConnections(dbs) {
-    for (let i = 1; i <= 3; i++)
-        if (dbs[i].connection) dbs[i].connection.release();
+    console.log('-------------------------------------------------> CONNEECTIONS: ' + util.inspect(dbs));
+    for (let i = 1; i <= 3; i++) if (dbs[i].connection && !dbs[i].isDown) dbs[i].connection.release();
 }
 
 const db = {
@@ -184,6 +181,8 @@ const db = {
             console.log(error);
             callback(0);
         }
+
+        releaseConnections(dbs);
     },
 
     find: async function (id, callback) {
@@ -232,6 +231,8 @@ const db = {
                 });
             });
         }
+
+        releaseConnections(dbs);
     },
 
     //TODO: ID NODE 2 SEARCH NODE 2 / 3 FIRST
@@ -273,6 +274,8 @@ const db = {
                     callback(false);
                 });
         }
+
+        releaseConnections(dbs);
     },
 
     findAll: async function (callback) {
@@ -313,6 +316,8 @@ const db = {
                     callback(false);
                 });
         }
+
+        releaseConnections(dbs);
     },
 
     update: async function (id, name, year, rating, genre, director, actor_1, actor_2, callback) {
@@ -320,47 +325,61 @@ const db = {
         let params = [id, name, year, rating, genre, director, actor_1, actor_2];
         let date = new Date().toISOString().slice(0, 19).replace('T', ' ');
         let query = '';
-        let index;
+        let index = params[0];
 
         // Creates an array of promises for each node that contains a replica
-        let nodesToUpdate = [1, parseInt(year) < 1980 ? 2 : 3].map(function (value) {
+        let nodesToInsert = [1, parseInt(year) < 1980 ? 2 : 3].map(function (value) {
             return dbs[value]
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
-                    index = result;
-                    dbs[value].commit();
                     return Promise.resolve(value);
                 })
-                .catch(function () {
-                    dbs[value].rollback();
-                    query = dbs[value].lastSQLObject.sql;
-                    index = 0;
+                .catch(function (error) {
                     return Promise.reject(value);
                 });
         });
 
-        let results = await Promise.allSettled(nodesToUpdate);
+        let results = await Promise.allSettled(nodesToInsert);
+
+        // Splits the results into the two arrays of node numbers depending on whether they failed
+        // eg. failedSites = [0, 3]; workingSites = [1]
         let failedSites = [];
         let workingSites = [];
-        for (let i of results) {
-            if ((i.status = 'rejected')) {
-                failedSites.push(i.value);
-            } else {
-                workingSites.push(i.value);
-            }
+        for (i of results) {
+            if (i.status == 'rejected') failedSites.push(i.reason);
+            else workingSites.push(i.value);
         }
 
-        callback('INDEX 1: ' + index);
+        console.log('failed sites: ' + failedSites);
+        console.log('working sites: ' + workingSites);
 
-        let messagesToSend = [];
-        for (let i of workingSites) {
-            for (let j of failedSites) {
-                messagesToSend.push(dbs[i].insertOutbox(date, j, query));
-            }
+        let inboxQuery = `INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
+                          VALUES(?, ?, ?, ?)`;
+
+        // For each failed site, try to write to outbox, if unable rollback everything and send error
+        for (let i of failedSites) {
+            let messagesToSend = [];
+            for (let j of workingSites) messagesToSend.push(dbs[j].query(inboxQuery, [date, i, query, Dao.MESSAGES.UNACKNOWLEDGED]));
+
+            await Promise.any(messagesToSend).catch(function (error) {
+                console.log(error.message);
+                for (let j of workingSites) dbs[j].rollback();
+                callback(0);
+                return;
+            });
         }
 
-        await Promise.allSettled(messagesToSend);
+        // If able to write a message for all failed sites, commit transations
+        try {
+            for (let i of workingSites) dbs[i].commit();
+            callback(index);
+        } catch (error) {
+            console.log(error);
+            callback(0);
+        }
+
+        releaseConnections(dbs);
     },
 
     delete: async function (id, callback) {
@@ -408,6 +427,8 @@ const db = {
         }
 
         await Promise.allSettled(messagesToSend);
+
+        releaseConnections(dbs);
     },
 };
 
