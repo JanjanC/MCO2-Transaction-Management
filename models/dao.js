@@ -9,6 +9,7 @@ class Dao {
             user: 'g4_node_1',
             password: 'password',
             database: 'imdb_ijs_1',
+            connectionLimit: 10,
             connectTimeout: 5000,
         },
         {
@@ -17,6 +18,7 @@ class Dao {
             user: 'g4_node_2',
             password: 'password',
             database: 'imdb_ijs_2',
+            connectionLimit: 10,
             connectTimeout: 5000,
         },
         {
@@ -25,6 +27,7 @@ class Dao {
             user: 'g4_node_3',
             password: 'password',
             database: 'imdb_ijs_3',
+            connectionLimit: 10,
             connectTimeout: 5000,
         },
     ];
@@ -77,13 +80,12 @@ class Dao {
         this.node = node;
     }
 
-    initialize() {
+    initialize(connection) {
         console.log('in initialize of node #' + this.node);
-        if (this.connection) this.connection.destroy();
-        this.connection = mysql.createConnection(Dao.NODES[this.node]);
+        this.connection = connection;
 
         /**
-         * 
+         *
          * @param {String} query - The very command that's executing and directly connected to the MySQL database
          * @param {any[]} options
          * @returns Promise of
@@ -116,7 +118,7 @@ class Dao {
         };
 
         return new Promise((resolve, reject) => {
-            this.connection.connect((error) => {
+            this.connection.getConnection((error) => {
                 if (error) {
                     console.log('Node ' + this.node + ' errored in connecting: ' + error.message + ' ' + error.errno);
                     if (this.query == undefined) this.query = unconnectedQuery;

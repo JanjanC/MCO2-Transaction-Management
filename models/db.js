@@ -1,14 +1,117 @@
 const dotenv = require('dotenv');
 const util = require('util');
 const { Dao } = require('../models/dao');
+const mysql = require('mysql');
 
 dotenv.config();
 
 const INTERVAL = 15000;
 
-var connection;
-var dbs = {};
 var nodeNum;
+let pools = [];
+
+async function monitorOutbox() {
+    const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
+    try {
+        await dbs[nodeNum].startTransaction();
+        let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]);
+        await dbs[nodeNum].commit();
+    } catch {
+        setTimeout(monitorOutbox, INTERVAL);
+        return;
+    }
+    //console.log('data');
+    for (let i of messages) {
+        //console.log(i);
+        await dbs[nodeNum].startTransaction();
+        await dbs[i[Dao.outbox.recipient]]
+            .insertInbox(i[Dao.outbox.id], nodeNum, i[Dao.outbox.message])
+            .then(async () => {
+                await dbs[i[Dao.outbox.recipient]].commit();
+                await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.outbox, Dao.MESSAGES.SENT);
+                await dbs[nodeNum].commit();
+            })
+            .catch(async (error) => {
+                await dbs[i[Dao.outbox.recipient]].rollback();
+                await dbs[nodeNum].rollback();
+                if (error.errno == 1062) {
+                    // duplicate key entry
+                    try {
+                        await dbs[nodeNum].startTransaction();
+                        await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.outbox, Dao.MESSAGES.SENT);
+                        await dbs[nodeNum].commit();
+                    } catch {
+                        if (!dbs[nodeNum].isDown) await dbs[nodeNum].rollback();
+                    }
+                }
+                console.log('' + error);
+            });
+    }
+
+    setTimeout(monitorOutbox, INTERVAL);
+}
+
+async function monitorInbox() {
+    const query = `SELECT * 
+                    FROM ${Dao.tables.inbox} 
+                    WHERE ${Dao.inbox.status} =  ?
+                    ORDER BY ${Dao.inbox.id} ASC`;
+
+    try {
+        await dbs[nodeNum].startTransaction();
+        let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Retrieves the list of unacknowledged messages in the inbox
+        console.log('MONITOR INBOX MESSAGES: ' + messages);
+        await dbs[nodeNum].commit();
+    } catch (error) {
+        console.log('MONITOR INBOX: ' + error);
+        setTimeout(monitorInbox, INTERVAL);
+        return;
+    }
+
+    //Messages contains all queued up to go transactions
+    //For each unacknowledged message
+    for (let i of messages) {
+        dbs[nodeNum]
+            //Start a transaction in this current db
+            .startTransaction()
+            //If the transaction is successful...
+            .then(async function () {
+                await dbs[nodeNum].query(i[Dao.inbox.message]); //Executes the 'query' inside the inbox
+                await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.inbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledged to your own inbox
+                await dbs[i[Dao.inbox.sender]].startTransaction(); //Starts the transaction for the other DB
+                await dbs[i[Dao.inbox.sender]].setMessageStatus(i[Dao.outbox.id], Dao.tables.outbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledge to the outbox of the sender
+                await Promise.all([dbs[nodeNum].commit(), dbs[i[Dao.inbox.sender]].commit()]); //Commit once it is queried and acknowledge ---> ENDS THE TRANSACTION
+            })
+            //Else if it failed
+            .catch(function (error) {
+                //throw error;
+                console.log('catch monitor inbox ' + error);
+                if (!dbs[nodeNum].isDown) dbs[nodeNum].rollback(); //Rollback if something went wrong AND the current nodeNum is not down
+                //If the current nodeNum is down, it can be implied that the transaction is unsuccessful and an automatic rollback was executed
+            });
+    }
+
+    setTimeout(monitorInbox, INTERVAL);
+}
+
+async function getConnections() {
+    let dbs = {};
+    for (let i = 1; i <= 3; i++) {
+        dbs[i] = new Dao(i - 1);
+        try {
+            await dbs[i].initialize(pools[i - 1]);
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+    return dbs;
+}
+
+function releaseConnections(dbs) {
+    for (let i = 1; i <= 3; i++)
+        if (dbs[i].connection) dbs[i].connection.release();
+}
 
 const db = {
     /*
@@ -16,103 +119,15 @@ const db = {
     */
     connect: async function (node) {
         nodeNum = node;
-        let inits = [];
-        for (let i = 1; i <= Dao.NODES.length; i++) {
-            dbs[i] = new Dao(i - 1);
-            inits.push(dbs[i].initialize());
-        }
-        await Promise.allSettled(inits);
-        this.monitorOutbox();
-        this.monitorInbox();
-    },
+        for (let i = 0; i < 3; i++) pools.push(mysql.createPool(Dao.NODES[i]));
 
-    /**
-     *
-     */
-    monitorInbox: async function () {
-        const query = `SELECT * 
-                        FROM ${Dao.tables.inbox} 
-                        WHERE ${Dao.inbox.status} =  ?
-                        ORDER BY ${Dao.inbox.id} ASC`;
-
-        try {
-            await dbs[nodeNum].startTransaction();
-            let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Retrieves the list of unacknowledged messages in the inbox
-            console.log('MONITOR INBOX MESSAGES: ' + messages);
-            await dbs[nodeNum].commit();
-        } catch (error) {
-            console.log('MONITOR INBOX: ' + error);
-            return;
-        }
-
-        //Messages contains all queued up to go transactions
-        //For each unacknowledged message
-        for (let i of messages) {
-            dbs[nodeNum]
-                //Start a transaction in this current db
-                .startTransaction()
-                //If the transaction is successful...
-                .then(async function () {
-                    await dbs[nodeNum].query(i[Dao.inbox.message]); //Executes the 'query' inside the inbox
-                    await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.inbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledged to your own inbox
-                    await dbs[i[Dao.inbox.sender]].startTransaction(); //Starts the transaction for the other DB
-                    await dbs[i[Dao.inbox.sender]].setMessageStatus(i[Dao.outbox.id], Dao.tables.outbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledge to the outbox of the sender
-                    await Promise.all([dbs[nodeNum].commit(), dbs[i[Dao.inbox.sender]].commit()]); //Commit once it is queried and acknowledge ---> ENDS THE TRANSACTION
-                })
-                //Else if it failed
-                .catch(function (error) {
-                    //throw error;
-                    console.log('catch monitor inbox ' + error);
-                    if (!dbs[nodeNum].isDown) dbs[nodeNum].rollback(); //Rollback if something went wrong AND the current nodeNum is not down
-                    //If the current nodeNum is down, it can be implied that the transaction is unsuccessful and an automatic rollback was executed
-                });
-        }
-        setTimeout(this.monitorInbox, INTERVAL);
-    },
-
-    //send to a message to other nodes
-    monitorOutbox: async function () {
-        const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
-        try {
-            await dbs[nodeNum].startTransaction();
-            let messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]);
-            await dbs[nodeNum].commit();
-        } catch {
-            setTimeout(this.monitorOutbox, INTERVAL);
-            return;
-        }
-        //console.log('data');
-        for (let i of messages) {
-            //console.log(i);
-            await dbs[nodeNum].startTransaction();
-            await dbs[i[Dao.outbox.recipient]]
-                .insertInbox(i[Dao.outbox.id], nodeNum, i[Dao.outbox.message])
-                .then(async () => {
-                    await dbs[i[Dao.outbox.recipient]].commit();
-                    await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.outbox, Dao.MESSAGES.SENT);
-                    await dbs[nodeNum].commit();
-                })
-                .catch(async (error) => {
-                    await dbs[i[Dao.outbox.recipient]].rollback();
-                    await dbs[nodeNum].rollback();
-                    if (error.errno == 1062) {
-                        // duplicate key entry
-                        try {
-                            await dbs[nodeNum].startTransaction();
-                            await dbs[nodeNum].setMessageStatus(i[Dao.inbox.id], Dao.tables.outbox, Dao.MESSAGES.SENT);
-                            await dbs[nodeNum].commit();
-                        } catch {
-                            if (!dbs[nodeNum].isDown) await dbs[nodeNum].rollback();
-                        }
-                    }
-                    console.log(error.name);
-                });
-        }
-        setTimeout(this.monitorOutbox, INTERVAL);
+        //monitorOutbox();
+        //monitorInbox();
     },
 
     // TODO: Configure the node and target the special scenario of either sending two messages, or sending to node 1 first
     insert: async function (name, year, rating, genre, director, actor_1, actor_2, callback) {
+        let dbs = await getConnections();
         let params = [new Date().getTime(), name, year, rating, genre, director, actor_1, actor_2];
         let date = new Date().toISOString().slice(0, 19).replace('T', ' ');
         let query = '';
@@ -172,6 +187,7 @@ const db = {
     },
 
     find: async function (id, callback) {
+        let dbs = await getConnections();
         let queryDb1 = () => {
             return dbs[1].find(id).then(async function (result) {
                 await dbs[1].commit();
@@ -220,6 +236,7 @@ const db = {
 
     //TODO: ID NODE 2 SEARCH NODE 2 / 3 FIRST
     searchMovie: async function (name, callback) {
+        let dbs = await getConnections();
         let queryDb1 = () => {
             return dbs[1].searchMovie(name).then(async function (result) {
                 await dbs[1].commit();
@@ -258,7 +275,8 @@ const db = {
         }
     },
 
-    findAll: function (callback) {
+    findAll: async function (callback) {
+        let dbs = await getConnections();
         let queryDb1 = () => {
             return dbs[1].findAll().then(async function (result) {
                 await dbs[1].commit();
@@ -295,29 +313,10 @@ const db = {
                     callback(false);
                 });
         }
-
-        // dbs[1]
-        //     .findAll()
-        //     .then(async function (result) {
-        //         await dbs[1].commit();
-        //         callback(result);
-        //     })
-        //     .catch(async function (error) {
-        //         dbs[1].rollback();
-        //         if (error == Dao.MESSAGES.UNCONNECTED) {
-        //             let results = await Promise.all([dbs[2].findAll(), dbs[3].findAll()]);
-        //             await Promise.all([dbs[2].commit(), dbs[3].commit()]);
-        //             callback(result[0].concat(result[1]));
-        //         }
-        //     })
-        //     .catch(async function (error) {
-        //         //all servers are down :/
-        //         await Promise.all([dbs[2].rollback(), dbs[3].rollback()]);
-        //         callback(false);
-        //     });
     },
 
     update: async function (id, name, year, rating, genre, director, actor_1, actor_2, callback) {
+        let dbs = await getConnections();
         let params = [id, name, year, rating, genre, director, actor_1, actor_2];
         let date = new Date().toISOString().slice(0, 19).replace('T', ' ');
         let query = '';
@@ -365,6 +364,7 @@ const db = {
     },
 
     delete: async function (id, callback) {
+        let dbs = await getConnections();
         let date = new Date().toISOString().slice(0, 19).replace('T', ' ');
         let query = '';
         let index;
