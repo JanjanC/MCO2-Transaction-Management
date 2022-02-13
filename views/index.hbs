@@ -46,7 +46,7 @@
                 <!--TABLE HEADER-->
                 <thead>
                     <tr>
-                        <th scope='col'>ID</th>
+                        {{!<th scope='col'>ID</th>}}
                         <th scope='col'>Movie Name</th>
                         <th scope='col'>Year</th>
                         <th scope='col'>Rating</th>
@@ -61,7 +61,7 @@
                     <tbody>
                         {{#each movies}}
                             <tr class='movie-item' onclick="window.location.href = '/view/{{this.id}}';">
-                                <th scope='row'>{{this.id}}</th>
+                                {{!<th scope='row'>{{this.id}}{{!</th>}}
                                 <td>{{this.name}}</td>
                                 <td>{{this.year}}</td>
                                 <td>{{this.rating}}</td>

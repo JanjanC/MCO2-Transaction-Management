@@ -206,13 +206,13 @@ class Dao {
         return this.query('ROLLBACK;');
     }
 
-    insertOutbox(date, recipient, query) {
+    insertOutbox(date, recipient, query) {      
         return this.query('START TRANSACTION;').then((result) => {
             return this.query(
                 `
                 INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
                 VALUES(?, ?, ?, ?)
-            `,
+                `,
                 [date, recipient, query, Dao.MESSAGES.UNACKNOWLEDGED]
             );
         });
