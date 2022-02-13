@@ -13,6 +13,7 @@ const controller = {
 
     getViewPage: function (req, res) {
         db.find(req.params.movie_id, function (result) {
+            console.log('get view page result' + JSON.stringify(result));
             if (result) {
                 res.render('view', result[0]);
             } else {
@@ -59,6 +60,10 @@ const controller = {
                 res.redirect('/error');
             }
         });
+    },
+
+    getReport: function (req, res) {
+        res.render('report');
     },
 
     getError: function (req, res) {
