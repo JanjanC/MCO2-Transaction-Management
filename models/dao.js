@@ -4,7 +4,7 @@ const util = require('util');
 class Dao {
     static NODES = [
         {
-            host: 'db4free.net',
+            host: 'google.com',
             port: 3306,
             user: 'g4_node_1',
             password: 'password',
@@ -78,38 +78,48 @@ class Dao {
     }
 
     initialize() {
+        console.log('in initialize of node #' + this.node);
         if (this.connection) this.connection.destroy();
         this.connection = mysql.createConnection(Dao.NODES[this.node]);
 
         /**
-         *
-         * @param {String} query
+         * 
+         * @param {String} query - The very command that's executing and directly connected to the MySQL database
          * @param {any[]} options
          * @returns Promise of
          */
         let promiseQuery = (query, options) => {
-            console.log('query: ' + query);
-            console.log('options: ' + options);
+            console.log('query in node ' + this.node + ': ' + query);
+            console.log('\twith values: ' + JSON.stringify(options));
             return new Promise((resolve, reject) => {
                 this.lastSQLObject = this.connection.query(query, options, function (error, results) {
                     if (error) reject(error);
                     else resolve(results);
                 });
             }).catch((error) => {
-                console.log(error.message);
-                //if (error.message.split(' ')[1] == 'ENOTFOUND' || error.message.split(' ')[1] == 'ETIMEDOUT')
-                this.isDown = true;
-                return error;
+                console.log('catch in init' + error.message + ' ' + error.errno);
+                if (error && (error.errno == -3008 || error.message == 'connect ETIMEDOUT')) this.isDown = true;
+                return Promise.reject(error);
             });
         };
+        let unconnectedQuery = async (query, options) => {
+            console.log('fake query in node ' + this.node + ': ' + query);
+            console.log('\twith values: ' + JSON.stringify(options));
+            try {
+                await this.initialize();
+                this.query = promiseQuery;
+                return promiseQuery(query, options);
+            } catch {
+                console.log('Node ' + this.node + ' failed to reconnect');
+                return Promise.reject(Dao.MESSAGES.UNCONNECTED);
+            }
+        };
+
         return new Promise((resolve, reject) => {
             this.connection.connect((error) => {
                 if (error) {
-                    this.query = function (query, options) {
-                        return this.initialize().then((value) => {
-                            return promiseQuery;
-                        });
-                    };
+                    console.log('Node ' + this.node + ' errored in connecting: ' + error.message + ' ' + error.errno);
+                    if (this.query == undefined) this.query = unconnectedQuery;
                     this.isDown = true;
                     reject(Dao.MESSAGES.UNCONNECTED);
                 } else {
@@ -129,7 +139,7 @@ class Dao {
         director = director ? director : null;
 
         return this.query('START TRANSACTION;').then((result) => {
-            console.log('got here');
+            console.log('PROCEEDING WITH INSERT');
             return this.query(
                 `
                 INSERT INTO ${Dao.tables.imdb} (${Dao.imdb.id}, ${Dao.imdb.name}, ${Dao.imdb.year}, ${Dao.imdb.rating}, ${Dao.imdb.genre}, ${Dao.imdb.director}, ${Dao.imdb.actor_1}, ${Dao.imdb.actor_2})
@@ -198,6 +208,7 @@ class Dao {
     }
 
     commit() {
+        //throw new Error('This is a fake error before the commit >:)');
         return this.query('COMMIT;');
         //return this.connection.commit();
     }
@@ -206,41 +217,40 @@ class Dao {
         return this.query('ROLLBACK;');
     }
 
-    insertOutbox(date, recipient, query) {      
-        return this.query('START TRANSACTION;').then((result) => {
-            return this.query(
-                `
-                INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
-                VALUES(?, ?, ?, ?)
-                `,
-                [date, recipient, query, Dao.MESSAGES.UNACKNOWLEDGED]
-            );
-        });
+    startTransaction() {
+        return this.query('START TRANSACTION;');
+    }
+
+    insertOutbox(date, recipient, query) {
+        return this.query(
+            `
+            INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
+            VALUES(?, ?, ?, ?)
+            `,
+            [date, recipient, query, Dao.MESSAGES.UNACKNOWLEDGED]
+        );
     }
 
     insertInbox(date, sender, query) {
-        return this.query('START TRANSACTION;').then((result) => {
-            return this.query(
-                `
-                INSERT INTO ${Dao.tables.inbox} (${Dao.inbox.id}, ${Dao.inbox.sender}, ${Dao.inbox.message}, ${Dao.inbox.status})
-                VALUES(?, ?, ?, ?)
-            `,
-                [date, sender, query, Dao.MESSAGES.UNACKNOWLEDGED]
-            );
-        });
+        return this.query(
+            `
+            INSERT INTO ${Dao.tables.inbox} (${Dao.inbox.id}, ${Dao.inbox.sender}, ${Dao.inbox.message}, ${Dao.inbox.status})
+            VALUES(?, ?, ?, ?)`,
+            [date, sender, query, Dao.MESSAGES.UNACKNOWLEDGED]
+        );
     }
 
-    setMessageStatus(id, status) {
-        return this.query('START TRANSACTION;').then((result) => {
-            return this.query(
-                `
-                UPDATE ${Dao.tables.outbox}
-                SET ${Dao.outbox.status} = ?
-                WHERE ${Dao.outbox.id} = ?
-            `,
-                [status, id]
-            );
-        });
+    setMessageStatus(id, table, status) {
+        let statusBox = table == Dao.tables.outbox ? Dao.outbox.status : Dao.inbox.status;
+        let idBox = table == Dao.tables.outbox ? Dao.outbox.id : Dao.inbox.id;
+
+        return this.query(
+            `
+            UPDATE ${table}
+            SET ${statusBox} = ?
+            WHERE ${idBox} = ?`,
+            [status, id]
+        );
     }
 }
 
