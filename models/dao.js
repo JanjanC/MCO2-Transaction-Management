@@ -4,13 +4,13 @@ const util = require('util');
 class Dao {
     static NODES = [
         {
-            host: 'google.com',
+            host: 'stadvdb-node-1.mysql.database.azure.com',
             port: 3306,
-            user: 'g4_node_1',
-            password: 'password',
-            database: 'imdb_ijs_1',
+            user: 'user@stadvdb-node-1',
+            password: 'password.12345',
+            database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 5000,
+            connectTimeout: 10000,
         },
         {
             host: 'db4free.net',
@@ -19,7 +19,7 @@ class Dao {
             password: 'password',
             database: 'imdb_ijs_2',
             connectionLimit: 30,
-            connectTimeout: 5000,
+            connectTimeout: 10000,
         },
         {
             host: 'db4free.net',
@@ -28,7 +28,7 @@ class Dao {
             password: 'password',
             database: 'imdb_ijs_3',
             connectionLimit: 30,
-            connectTimeout: 5000,
+            connectTimeout: 10000,
         },
     ];
     static MESSAGES = {
@@ -82,7 +82,7 @@ class Dao {
     }
 
     initialize(pool) {
-        console.log('in initialize of node #' + this.node);
+        console.log('in initialize of node #' + (this.node + 1));
         this.pool = pool;
 
         /**
@@ -92,10 +92,11 @@ class Dao {
          * @returns Promise of
          */
         let promiseQuery = (query, options) => {
-            console.log('query in node ' + this.node + ': ' + query);
+            console.log('query in node ' + (this.node + 1) + ': ' + query);
             console.log('\twith values: ' + JSON.stringify(options));
-            return new Promise((resolve, connection) => {
-                this.lastSQLObject = this.pool.query(query, options, function (error, results) {
+            return new Promise((resolve, reject) => {
+                this.lastSQLObject = this.connection.query(query, options, function (error, results) {
+                    if (error) console.log(error.message);
                     if (error) reject(error);
                     else resolve(results);
                 });
@@ -105,8 +106,8 @@ class Dao {
                 return Promise.reject(error);
             });
         };
-        let unconnectedQuery = async (query, options) => {
-            console.log('fake query in node ' + this.node + ': ' + query);
+        let unconnectedQuery = (query, options) => {
+            console.log('fake query in node ' + (this.node + 1) + ': ' + query);
             console.log('\twith values: ' + JSON.stringify(options));
             // try {
             //     await this.initialize();
@@ -119,15 +120,21 @@ class Dao {
         };
 
         return new Promise((resolve, reject) => {
-            this.pool.getConnection((error, conn) => {
+            this.pool.getConnection(async (error, conn) => {
                 if (error) {
-                    console.log('Node ' + this.node + ' errored in connecting: ' + error.message + ' ' + error.errno);
+                    console.log('Node ' + (this.node + 1) + ' errored in connecting: ' + error.message + ' ' + error.errno);
                     if (this.query == undefined) this.query = unconnectedQuery;
                     this.isDown = true;
                     reject(Dao.MESSAGES.UNCONNECTED);
                 } else {
                     this.connection = conn;
                     this.query = promiseQuery;
+                    try {
+                        await this.connection.query('SET SESSION ISOLATION LEVEL REPEATABLE READ');
+                    } catch (error) {
+                        console.log('err while setting transaction level' + error);
+                        reject(Dao.MESSAGES.UNCONNECTED);
+                    }
                     this.isDown = false;
                     resolve(Dao.MESSAGES.CONNECTED);
                 }
@@ -197,17 +204,31 @@ class Dao {
         });
     }
 
-    findAll() {
+    findAll(page) {
         return this.query('START TRANSACTION;').then((result) => {
-            return this.query(`SELECT * FROM ${Dao.tables.imdb};`);
+            return this.query(
+                `
+                SELECT * FROM ${Dao.tables.imdb} 
+                LIMIT 20
+                OFFSET ${(page - 1) * 20}
+                `
+            );
         });
 
         //return this.query(`SELECT * FROM ${Dao.tables.imdb};`)
     }
 
-    searchMovie(name) {
+    searchMovie(name, page) {
         return this.query('START TRANSACTION;').then((result) => {
-            return this.query(`SELECT * FROM ${Dao.tables.imdb} WHERE name LIKE ?`, [`%${name}%`]);
+            return this.query(
+                `
+                SELECT * 
+                FROM ${Dao.tables.imdb} 
+                WHERE name LIKE ? 
+                LIMIT 20 
+                OFFSET ${(page - 1) * 20}`,
+                [`%${name}%`]
+            );
         });
     }
 
