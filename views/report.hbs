@@ -30,7 +30,7 @@
                 {{/each}}
             </div>
 
-            <div class='overflow-auto h-25'>
+            <div class='overflow-auto'>
                 <h4>Total Number of Movies Per Genre:</h4>
                 {{#each tot_per_genre}}
                     <h5 class='.ml-4'>{{#if this.genre}}{{this.genre}}{{else}}null{{/if}}: {{this.count}}</h5>
