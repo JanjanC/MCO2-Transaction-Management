@@ -6,3 +6,9 @@
     background-color: rgba(80, 102, 134, 0.1);
     transition: 0.2s;
 }
+
+.report {
+    max-height: 10em;
+    margin-bottom: 3em;
+    overflow-y: scroll;
+}
