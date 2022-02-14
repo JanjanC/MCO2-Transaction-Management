@@ -2,9 +2,14 @@ const db = require('../models/db.js');
 
 const controller = {
     getIndex: function (req, res) {
-        db.findAll(function (result) {
+        res.redirect('/page/1');
+    },
+
+    getIndexPage: function (req, res) {
+        page = +req.params.page_num;
+        db.findAll(page, function (result) {
             if (result) {
-                res.render('index', { movies: result });
+                res.render('index', { movies: result, page_prev: page - 1, page: page, page_next: page + 1 });
             } else {
                 res.redirect('/error');
             }
@@ -53,9 +58,10 @@ const controller = {
     },
 
     getSearchMovies: function (req, res) {
-        db.searchMovie(req.query.movie_name, function (result) {
+        page = +req.params.page_num;
+        db.searchMovie(req.query.movie_name, page, function (result) {
             if (result) {
-                res.render('index', { movies: result });
+                res.render('index', { movies: result, page_prev: page - 1, page: page, page_next: page + 1 });
             } else {
                 res.redirect('/error');
             }
@@ -63,7 +69,11 @@ const controller = {
     },
 
     getReport: function (req, res) {
-        res.render('report');
+        db.generateReport(function (result) {
+            console.log('-------->REPORT GENERATED<-----UWU---\n' + JSON.stringify(result));
+            if (result) res.render('report', result);
+            else res.redirect('/error');
+        });
     },
 
     getError: function (req, res) {
