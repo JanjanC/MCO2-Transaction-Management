@@ -12,7 +12,7 @@ class Dao {
             password: 'password.12345',
             database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 10000,
+            connectTimeout: 5000,
         },
         {
             host: 'stadvdb-node-02.mysql.database.azure.com',
@@ -21,7 +21,7 @@ class Dao {
             password: 'password.12345',
             database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 10000,
+            connectTimeout: 5000,
         },
         {
             host: 'stadvdb-node-03.mysql.database.azure.com',
@@ -30,7 +30,7 @@ class Dao {
             password: 'password.12345',
             database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 10000,
+            connectTimeout: 5000,
         },
     ];
     static MESSAGES = {
