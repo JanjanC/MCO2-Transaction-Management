@@ -144,7 +144,7 @@ function releaseConnections(dbs) {
     }
 }
 
-async function sendMessages (results, dbs) {
+async function sendMessages (results, dbs, query) {
     let failedSites = [];
     let workingSites = [];
     for (i of results) {
@@ -204,8 +204,8 @@ const db = {
     connect: async function (node) {
         nodeNum = node;
         for (let i = 0; i < 3; i++) pools.push(mysql.createPool(Dao.NODES[i]));
-        //monitorOutbox();
-        //await monitorInbox();
+        monitorOutbox();
+        await monitorInbox();
     },
 
     // TODO: Configure the node and target the special scenario of either sending two messages, or sending to node 1 first
@@ -229,7 +229,7 @@ const db = {
         });
 
         let results = await Promise.allSettled(nodesToInsert);
-        if (sendMessages(results, dbs)) {
+        if (sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
@@ -396,7 +396,7 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        if (sendMessages(results, dbs)) {
+        if (sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
@@ -425,7 +425,7 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        if (sendMessages(results, dbs)) {
+        if (sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
