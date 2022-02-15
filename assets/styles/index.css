@@ -8,7 +8,22 @@
 }
 
 .report {
-    max-height: 10em;
+    max-height: 20em;
     margin-bottom: 3em;
     overflow-y: scroll;
+}
+
+.report-header {
+    color: #007bff;
+}
+
+.report-item {
+}
+
+.report-value {
+    color: #17a2b8;
+}
+
+.report-empty {
+    color: #dc3545;
 }

@@ -493,29 +493,43 @@ const db = {
         let allQueries = {
             tot_movies: `SELECT COUNT(*) AS count FROM ${Dao.tables.imdb}`, //Total Number of Movies
             avg_rating: `SELECT AVG(${Dao.imdb.rating}) AS avg FROM ${Dao.tables.imdb}`, //Average Rating of all Movies
-            tot_per_genre: `SELECT ${Dao.imdb.genre}, COUNT(*) AS count FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.genre}`, //Total Number of Movies Per Genre
-            avg_per_genre: `SELECT ${Dao.imdb.genre}, AVG(${Dao.imdb.rating}) AS avg FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.genre}`, //Avg. Rating Per Genre
-            tot_per_year: `SELECT ${Dao.imdb.year}, COUNT(*) AS count FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.year}`, //Total Number Per Year
-            avg_per_year: `SELECT ${Dao.imdb.year}, AVG(${Dao.imdb.rating}) AS avg FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.year}`, //Avg. Rating Per Year
+            tot_per_genre: `SELECT ${Dao.imdb.genre}, COUNT(*) AS count FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.genre} ORDER BY ${Dao.imdb.genre}`, //Total Number of Movies Per Genre
+            avg_per_genre: `SELECT ${Dao.imdb.genre}, AVG(${Dao.imdb.rating}) AS avg FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.genre} ORDER BY ${Dao.imdb.genre}`, //Avg. Rating Per Genre
+            tot_per_year: `SELECT ${Dao.imdb.year}, COUNT(*) AS count FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.year} ORDER BY ${Dao.imdb.year}`, //Total Number Per Year
+            avg_per_year: `SELECT ${Dao.imdb.year}, AVG(${Dao.imdb.rating}) AS avg FROM ${Dao.tables.imdb} GROUP BY ${Dao.imdb.year} ORDER BY ${Dao.imdb.year}`, //Avg. Rating Per Year
         };
 
         const combinedItems = (array, query) => {
             if (query == allQueries.tot_per_year || query == allQueries.avg_per_year) {
                 return array;
             }
-            else if (query == allQueries.tot_movies) {
-                return array.reduce(function (prev, curr) {
-                    return prev + curr.count;
-                }, 0);
-            }
-            else if (uery == allQueries.avg_rating) {
-                return array.reduce(function (prev, curr) {
-                    return prev + curr.avg;
+            else if (query == allQueries.tot_movies || query == allQueries.avg_rating) {
+                return array.reduce(function (prev, i) {
+                    if (i.count)
+                        return prev + i.count;
+                    else
+                        return prev + i.avg;
                 }, 0);
             }
             else {
-                // TODO
-                return array; // return combined genre counts
+                let repeatedGenres = {}
+                let newArray = []
+                for (let i of array) {
+                    if (Object.keys(repeatedGenres).indexOf(i.genre)) {
+                        if (i.count)
+                            newArray[repeatedGenres[i.genre]] += i.count;
+                        else
+                            newArray[repeatedGenres[i.genre]] += i.avg;
+                    }
+                    else {
+                        if (i.count)
+                            newArray.push({}[i.genre] = i.count);
+                        else
+                            newArray.push({}[i.genre] = i.avg);
+                        repeatedGenres[i.genre] = newArray.length - 1;
+                    }
+                }
+                return newArray; // return combined genre counts
             }
             let resultingArray = [];
         };
