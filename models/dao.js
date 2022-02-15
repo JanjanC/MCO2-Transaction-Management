@@ -140,6 +140,16 @@ class Dao {
         });
     }
 
+    killConnection() {
+        console.log('Killed conection for Node ' + (this.node + 1));
+        this.query = (query, options) => {
+            console.log('fake query in node ' + (this.node + 1) + ': ' + query);
+            console.log('\twith values: ' + JSON.stringify(options));
+            return Promise.reject(Dao.MESSAGES.UNCONNECTED);
+        };
+        this.isDown = true;
+    }
+
     insert(id, name, year, rating, genre, director, actor_1, actor_2) {
         rating = rating ? rating : null;
         genre = genre ? genre : null;
