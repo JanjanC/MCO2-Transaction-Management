@@ -173,11 +173,11 @@ class Dao {
         return this.query('START TRANSACTION;').then((result) => {
             return this.query(
                 `
-                UPDATE ${Dao.tables.imdb} 
-                SET ${Dao.imdb.name} = ?, ${Dao.imdb.year} = ?, ${Dao.imdb.rating} = ?, ${Dao.imdb.genre} = ?, ${Dao.imdb.director} = ?, ${Dao.imdb.actor_1} = ?, ${Dao.imdb.actor_2} = ?
-                WHERE ${Dao.imdb.id} = ?
+                INSERT INTO ${Dao.tables.imdb} (${Dao.imdb.id}, ${Dao.imdb.name}, ${Dao.imdb.year}, ${Dao.imdb.rating}, ${Dao.imdb.genre}, ${Dao.imdb.director}, ${Dao.imdb.actor_1}, ${Dao.imdb.actor_2})
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE ${Dao.imdb.name} = ?, ${Dao.imdb.year} = ?, ${Dao.imdb.rating} = ?, ${Dao.imdb.genre} = ?, ${Dao.imdb.director} = ?, ${Dao.imdb.actor_1} = ?, ${Dao.imdb.actor_2} = ?
             `,
-                [name, year, rating, genre, director, actor_1, actor_2, id]
+                [id, name, year, rating, genre, director, actor_1, actor_2, name, year, rating, genre, director, actor_1, actor_2]
             );
         });
     }

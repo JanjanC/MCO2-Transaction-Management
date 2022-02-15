@@ -91,6 +91,7 @@ async function monitorInbox() {
                 await dbs[i[Dao.inbox.sender]].startTransaction(); //Starts the transaction for the other DB
                 await dbs[i[Dao.inbox.sender]].setMessageStatus(i[Dao.outbox.id], Dao.tables.outbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledge to the outbox of the sender
                 await Promise.all([dbs[nodeNum].commit(), dbs[i[Dao.inbox.sender]].commit()]); //Commit once it is queried and acknowledge ---> ENDS THE TRANSACTION
+                maintainDbConstraints(dbs)
             })
             //Else if it failed
             .catch(async function (error) {
@@ -210,6 +211,18 @@ async function sendMessages (results, dbs, query) {
     }
 }
 
+async function maintainDbConstraints(dbs) {
+    const removeGreaterThan = `
+        DELETE FROM ${Dao.tables.imdb}
+        WHERE ${Dao.imdb.year} >= 1980
+    `;
+    const removeLessThan = `
+        DELETE FROM ${Dao.tables.imdb}
+        WHERE ${Dao.imdb.year} < 1980
+    `;
+    Promise.allSettled([dbs[2].query(removeLessThan), dbs[3].query(removeGreaterThan)]);
+}
+
 const db = {
     /*
     node - the current node number of the server
@@ -265,6 +278,9 @@ const db = {
         };
         //Node 2/3 must check in both Node 2 and 3, because the year (and node #) cannot be determined through the id alone
         let queryDb2And3 = async () => {
+            const invert  = p  => new Promise((res, rej) => p.then(rej, res));
+            const firstOf = ps => invert(Promise.all(ps.map(invert)));
+
             let nodesToFind = [2, 3].map(function (value) {
                 return dbs[value].find(id).then(async function (result) {
                     console.log('db ' + value + ' got result ' + JSON.stringify(result));
@@ -274,7 +290,7 @@ const db = {
                     return Promise.resolve(result);
                 });
             });
-            return Promise.any(nodesToFind).then(function (result) {
+            return firstOf(nodesToFind).then(function (result) {
                 console.log('call back in db2&3 query' + JSON.stringify(result));
                 callback(result);
             });
@@ -397,13 +413,12 @@ const db = {
         let index = params[0];
 
         // Creates an array of promises for each node that contains a replica
-        let nodesToInsert = [1, parseInt(year) < 1980 ? 2 : 3].map(function (value) {
+        let nodesToInsert = [1, 2, 3].map(function (value) {
             //So that it returns it without executing it
             return dbs[value]
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
-                    console.log(dbs[value].lastSQLObject.sql);
                     return Promise.resolve(value);
                 })
                 .catch(function (error) {
@@ -412,7 +427,7 @@ const db = {
         });
 
         let results = await Promise.allSettled(nodesToInsert);
-
+        maintainDbConstraints(dbs);
         if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
