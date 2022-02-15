@@ -177,7 +177,7 @@ async function sendMessages (results, dbs, query) {
             break;
     }
 
-    //sentAny = false;
+    sentAny = false;
 
     if (sentAny) {
         try {
@@ -198,13 +198,13 @@ async function sendMessages (results, dbs, query) {
         }
     }
     else {
-        //let sleep = (ms) => {return new Promise(resolve => setTimeout(resolve, ms));}
-        //await sleep(7500);
+        let sleep = (ms) => {return new Promise(resolve => setTimeout(resolve, ms));}
+        await sleep(7500);
         let rollbackAll = workingSites.map(function(value) {
             return dbs[value].rollback()
         })
-        //console.log("FORCING A ROLLBACK");
-        //console.log("rolled back failed to send messages")
+        console.log("FORCING A ROLLBACK");
+        console.log("rolled back failed to send messages")
         await Promise.allSettled(rollbackAll);
         return false;
     }
