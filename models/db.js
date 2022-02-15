@@ -4,7 +4,7 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 15000;
+const INTERVAL = 30000;
 
 var nodeNum;
 let pools = [];
@@ -402,6 +402,7 @@ const db = {
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
+                    console.log(dbs[value].lastSQLObject.sql);
                     return Promise.resolve(value);
                 })
                 .catch(function (error) {
