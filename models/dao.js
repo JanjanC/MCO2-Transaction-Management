@@ -130,7 +130,7 @@ class Dao {
                     this.connection = conn;
                     this.query = promiseQuery;
                     try {
-                        await this.connection.query('SET SESSION ISOLATION LEVEL REPEATABLE READ');
+                        await this.connection.query('SET SESSION ISOLATION LEVEL READ UNCOMMITTED');
                     } catch (error) {
                         console.log('err while setting transaction level' + error);
                         reject(Dao.MESSAGES.UNCONNECTED);
