@@ -147,8 +147,9 @@ function releaseConnections(dbs) {
 async function sendMessages (results, dbs, query) {
     let failedSites = [];
     let workingSites = [];
-    for (i of results) {
-        if (i.status == 'rejected') failedSites.push(i.reason);
+    for (let i of results) {
+        if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) failedSites.push(i.reason);
+        //else if (i.status == 'rejected') workingSites.push(i.reason);
         else workingSites.push(i.value);
     }
 
@@ -176,29 +177,35 @@ async function sendMessages (results, dbs, query) {
             break;
     }
 
-    let rollbackAll = workingSites.map(function(value) {
-        return dbs[value].rollback()
-    })
+    //sentAny = false;
 
     if (sentAny) {
         try {
             let commitAll = workingSites.map(function(value) {
                 return dbs[value].commit()
             })
-        console.log("committed")
-        await Promise.all(commitAll);
+            console.log("committed")
+            await Promise.all(commitAll);
             return true;
         } catch (error) {
             console.log(error);
-        console.log("rolled back 1")
-        await Promise.allSettled(rollbackAll);           
+            console.log("rolled back failed to commit")
+            let rollbackAll = workingSites.map(function(value) {
+                return dbs[value].rollback()
+            })
+            await Promise.allSettled(rollbackAll);           
             return false;
         }
     }
     else {
-        console.log("rolled back 2")
+        //let sleep = (ms) => {return new Promise(resolve => setTimeout(resolve, ms));}
+        //await sleep(7500);
+        let rollbackAll = workingSites.map(function(value) {
+            return dbs[value].rollback()
+        })
+        //console.log("FORCING A ROLLBACK");
+        //console.log("rolled back failed to send messages")
         await Promise.allSettled(rollbackAll);
-
         return false;
     }
 }
@@ -235,7 +242,7 @@ const db = {
         });
 
         let results = await Promise.allSettled(nodesToInsert);
-        if (sendMessages(results, dbs, query)) {
+        if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
@@ -250,7 +257,9 @@ const db = {
         let queryDb1 = () => {
             return dbs[1].find(id).then(async function (result) {
                 await dbs[1].commit();
+                console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
                 console.log('call back in db1 query');
+
                 callback(result);
             });
         };
@@ -393,7 +402,6 @@ const db = {
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
-                    //throw new Error ("FAIL FOR TESTING PURPOSES >:]")
                     return Promise.resolve(value);
                 })
                 .catch(function (error) {
@@ -403,7 +411,7 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        if (sendMessages(results, dbs, query)) {
+        if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
@@ -432,7 +440,7 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        if (sendMessages(results, dbs, query)) {
+        if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
         }
