@@ -159,12 +159,14 @@ async function sendMessages (results, dbs, query) {
                         VALUES(?, ?, ?, ?)`;
 
     // For each failed site, try to write to outbox, if unable rollback everything and send error
+    let sentAny = failedSites.length == 0 ? true : false;
     for (let i of failedSites) {
-        let messagesToSend = workingSites.map(function (index) {
-            return dbs[index].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]);
+        let messagesToSend = workingSites.map(function (value) {
+            return dbs[value].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]);
         });
-        let sentAny = false;
-        await Promise.allSettled(messagesToSend).forEach(function (result) {
+        
+        let messageResults = await Promise.allSettled(messagesToSend)
+        messageResults.forEach(function (result) {
             if (result.status == "rejected")
                 console.log(result.reason);
             else
@@ -175,24 +177,28 @@ async function sendMessages (results, dbs, query) {
     }
 
     let rollbackAll = workingSites.map(function(value) {
-        return dbs[i].rollback()
+        return dbs[value].rollback()
     })
 
     if (sentAny) {
         try {
             let commitAll = workingSites.map(function(value) {
-                return dbs[i].commit()
+                return dbs[value].commit()
             })
-            await Promise.all(commitAll);
-            return (true);
+        console.log("committed")
+        await Promise.all(commitAll);
+            return true;
         } catch (error) {
             console.log(error);
-            await Promise.allSettled(rollbackAll);           
+        console.log("rolled back 1")
+        await Promise.allSettled(rollbackAll);           
             return false;
         }
     }
     else {
+        console.log("rolled back 2")
         await Promise.allSettled(rollbackAll);
+
         return false;
     }
 }
@@ -387,6 +393,7 @@ const db = {
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
+                    //throw new Error ("FAIL FOR TESTING PURPOSES >:]")
                     return Promise.resolve(value);
                 })
                 .catch(function (error) {
