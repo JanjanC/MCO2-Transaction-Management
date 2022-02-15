@@ -30,7 +30,7 @@ class Dao {
             password: 'password.12345',
             database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 10000,
+            connectTimeout: 20000,
         },
     ];
     static MESSAGES = {
