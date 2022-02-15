@@ -4,7 +4,7 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 60000;
+const INTERVAL = 100000;
 
 var nodeNum;
 let pools = [];
@@ -91,7 +91,7 @@ async function monitorInbox() {
                 await dbs[i[Dao.inbox.sender]].startTransaction(); //Starts the transaction for the other DB
                 await dbs[i[Dao.inbox.sender]].setMessageStatus(i[Dao.outbox.id], Dao.tables.outbox, Dao.MESSAGES.ACKNOWLEDGED); //Set acknowledge to the outbox of the sender
                 await Promise.all([dbs[nodeNum].commit(), dbs[i[Dao.inbox.sender]].commit()]); //Commit once it is queried and acknowledge ---> ENDS THE TRANSACTION
-                maintainDbConstraints(dbs)
+                maintainDbConstraints(dbs);
             })
             //Else if it failed
             .catch(async function (error) {
@@ -137,10 +137,8 @@ function releaseConnections(dbs) {
     for (let i = 1; i <= 3; i++) {
         if (dbs[i].connection && !dbs[i].isDown) {
             try {
-                if (dbs[i].isDown)
-                    Dao.NODES[i - 1].connectTimeout = 2.5;
-                else 
-                    Dao.NODES[i - 1].connectTimeout = 3;
+                if (dbs[i].isDown) Dao.NODES[i - 1].connectTimeout = 2.5;
+                else Dao.NODES[i - 1].connectTimeout = 3;
                 dbs[i].connection.release();
             } catch (error) {
                 console.log('realase connection error: ' + error.stack);
@@ -149,7 +147,7 @@ function releaseConnections(dbs) {
     }
 }
 
-async function sendMessages (results, dbs, query) {
+async function sendMessages(results, dbs, query) {
     let failedSites = [];
     let workingSites = [];
     for (let i of results) {
@@ -170,44 +168,40 @@ async function sendMessages (results, dbs, query) {
         let messagesToSend = workingSites.map(function (value) {
             return dbs[value].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]);
         });
-        
-        let messageResults = await Promise.allSettled(messagesToSend)
+
+        let messageResults = await Promise.allSettled(messagesToSend);
         messageResults.forEach(function (result) {
-            if (result.status == "rejected")
-                console.log(result.reason);
-            else
-                sentAny = true
+            if (result.status == 'rejected') console.log(result.reason);
+            else sentAny = true;
         });
-        if (!sentAny)
-            break;
+        if (!sentAny) break;
     }
 
     //sentAny = false;
 
     if (sentAny) {
         try {
-            let commitAll = workingSites.map(function(value) {
-                return dbs[value].commit()
-            })
-            console.log("committed")
+            let commitAll = workingSites.map(function (value) {
+                return dbs[value].commit();
+            });
+            console.log('committed');
             await Promise.all(commitAll);
             return true;
         } catch (error) {
             console.log(error);
-            console.log("rolled back failed to commit")
-            let rollbackAll = workingSites.map(function(value) {
-                return dbs[value].rollback()
-            })
-            await Promise.allSettled(rollbackAll);           
+            console.log('rolled back failed to commit');
+            let rollbackAll = workingSites.map(function (value) {
+                return dbs[value].rollback();
+            });
+            await Promise.allSettled(rollbackAll);
             return false;
         }
-    }
-    else {
+    } else {
         //let sleep = (ms) => {return new Promise(resolve => setTimeout(resolve, ms));}
         //await sleep(7500);
-        let rollbackAll = workingSites.map(function(value) {
-            return dbs[value].rollback()
-        })
+        let rollbackAll = workingSites.map(function (value) {
+            return dbs[value].rollback();
+        });
         //console.log("FORCING A ROLLBACK");
         //console.log("rolled back failed to send messages")
         await Promise.allSettled(rollbackAll);
@@ -262,8 +256,7 @@ const db = {
         if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
-        }
-        else {
+        } else {
             releaseConnections(dbs);
             callback(0);
         }
@@ -282,8 +275,8 @@ const db = {
         };
         //Node 2/3 must check in both Node 2 and 3, because the year (and node #) cannot be determined through the id alone
         let queryDb2And3 = async () => {
-            const invert  = p  => new Promise((res, rej) => p.then(rej, res));
-            const firstOf = ps => invert(Promise.all(ps.map(invert)));
+            const invert = (p) => new Promise((res, rej) => p.then(rej, res));
+            const firstOf = (ps) => invert(Promise.all(ps.map(invert)));
 
             let nodesToFind = [2, 3].map(function (value) {
                 return dbs[value].find(id).then(async function (result) {
@@ -436,8 +429,7 @@ const db = {
         if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
-        }
-        else {
+        } else {
             releaseConnections(dbs);
             callback(0);
         }
@@ -465,8 +457,7 @@ const db = {
         if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
-        }
-        else {
+        } else {
             releaseConnections(dbs);
             callback(0);
         }
@@ -485,30 +476,21 @@ const db = {
         const combinedItems = (array, query) => {
             if (query == allQueries.tot_per_year || query == allQueries.avg_per_year) {
                 return array;
-            }
-            else if (query == allQueries.tot_movies || query == allQueries.avg_rating) {
+            } else if (query == allQueries.tot_movies || query == allQueries.avg_rating) {
                 return array.reduce(function (prev, i) {
-                    if (i.count)
-                        return prev + i.count;
-                    else
-                        return prev + i.avg;
+                    if (i.count) return prev + i.count;
+                    else return prev + i.avg;
                 }, 0);
-            }
-            else {
-                let repeatedGenres = {}
-                let newArray = []
+            } else {
+                let repeatedGenres = {};
+                let newArray = [];
                 for (let i of array) {
                     if (Object.keys(repeatedGenres).indexOf(i.genre)) {
-                        if (i.count)
-                            newArray[repeatedGenres[i.genre]] += i.count;
-                        else
-                            newArray[repeatedGenres[i.genre]] += i.avg;
-                    }
-                    else {
-                        if (i.count)
-                            newArray.push({}[i.genre] = i.count);
-                        else
-                            newArray.push({}[i.genre] = i.avg);
+                        if (i.count) newArray[repeatedGenres[i.genre]] += i.count;
+                        else newArray[repeatedGenres[i.genre]] += i.avg;
+                    } else {
+                        if (i.count) newArray.push(({}[i.genre] = i.count));
+                        else newArray.push(({}[i.genre] = i.avg));
                         repeatedGenres[i.genre] = newArray.length - 1;
                     }
                 }
