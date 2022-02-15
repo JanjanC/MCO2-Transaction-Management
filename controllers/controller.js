@@ -109,16 +109,27 @@ const controller = {
         // values[db.columns.director] = req.body['director-name'];
         // values[db.columns.actor_1] = req.body['actor1-name'];
         // values[db.columns.actor_2] = req.body['actor2-name'];
-
+        
+        if (req.body['movies-genre'] == undefined)
+            req.body['movies-genre'] = '';
         db.update(
             req.params.movie_id,
             req.body['movies-name'],
-            req.body['movies-year'],
-            req.body['movies-rating'],
+            parseInt(req.body['movies-year']),
+            parseFloat(req.body['movies-rating']),
             req.body['movies-genre'],
             req.body['director-name'],
             req.body['actor1-name'],
             req.body['actor2-name'],
+            {
+                movie_name: req.body['movies-name'] !== req.body['old-name'],
+                year: parseInt(req.body['movies-year']) !== parseInt(req.body['old-year']),
+                rating: req.body['movies-rating'] !== req.body['old-rating'],
+                genre: req.body['movies-genre'] !== req.body['old-genre'],
+                director: req.body['director-name'] !== req.body['old-director'],
+                actor_1: req.body['actor1-name'] !== req.body['old-actor-1'],
+                actor_2: req.body['actor2-name'] !== req.body['old-actor-2'],
+            },
             function (result) {
                 if (result) {
                     res.redirect('/view/' + req.params.movie_id);

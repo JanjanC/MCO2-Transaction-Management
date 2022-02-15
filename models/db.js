@@ -220,7 +220,7 @@ async function maintainDbConstraints(dbs) {
         DELETE FROM ${Dao.tables.imdb}
         WHERE ${Dao.imdb.year} < 1980
     `;
-    Promise.allSettled([dbs[2].query(removeLessThan), dbs[3].query(removeGreaterThan)]);
+    await Promise.allSettled([dbs[2].query(removeGreaterThan), dbs[3].query(removeLessThan)]);
 }
 
 const db = {
@@ -270,7 +270,7 @@ const db = {
         let queryDb1 = () => {
             return dbs[1].find(id).then(async function (result) {
                 await dbs[1].commit();
-                console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
+                //console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
                 console.log('call back in db1 query');
 
                 callback(result);
@@ -284,7 +284,7 @@ const db = {
             let nodesToFind = [2, 3].map(function (value) {
                 return dbs[value].find(id).then(async function (result) {
                     console.log('db ' + value + ' got result ' + JSON.stringify(result));
-                    console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
+                    //console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
                     if (typeof result !== 'undefined' && result.length == 0) return Promise.reject('Did not find');
                     await dbs[value].commit();
                     return Promise.resolve(result);
@@ -310,6 +310,7 @@ const db = {
             });
         } else {
             queryDb2And3().catch(async function (error) {
+                console.log(error);
                 await Promise.allSettled([dbs[2].rollback(), dbs[3].rollback()]);
                 await queryDb1().catch(async function () {
                     if (!dbs[1].isDown) await dbs[1].rollback();
@@ -406,9 +407,9 @@ const db = {
         releaseConnections(dbs);
     },
 
-    update: async function (id, name, year, rating, genre, director, actor_1, actor_2, callback) {
+    update: async function (id, name, year, rating, genre, director, actor_1, actor_2, changed, callback) {
         let dbs = await getConnections();
-        let params = [id, name, year, rating, genre, director, actor_1, actor_2];
+        let params = [id, name, year, rating, genre, director, actor_1, actor_2, changed];
         let query = '';
         let index = params[0];
 
@@ -427,7 +428,7 @@ const db = {
         });
 
         let results = await Promise.allSettled(nodesToInsert);
-        maintainDbConstraints(dbs);
+        await maintainDbConstraints(dbs);
         if (await sendMessages(results, dbs, query)) {
             releaseConnections(dbs);
             callback(index);
@@ -509,7 +510,6 @@ const db = {
                 }
                 return newArray; // return combined genre counts
             }
-            let resultingArray = [];
         };
 
         let dbs = [];
