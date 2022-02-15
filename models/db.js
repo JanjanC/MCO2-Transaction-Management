@@ -4,13 +4,12 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 90000;
+const INTERVAL = 5000;
 
 var nodeNum;
 let pools = [];
 
-async function monitorOutbox() {
-    let dbs = await getConnections();
+async function monitorOutbox(dbs) {
     const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
     let messages;
     try {
@@ -18,7 +17,7 @@ async function monitorOutbox() {
         messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Fetch all the UNACKNOWLEDGED rows
         await dbs[nodeNum].commit();
     } catch {
-        setTimeout(monitorOutbox, INTERVAL);
+        setTimeout(monitorOutbox, INTERVAL, dbs);
         return;
     }
     //console.log('data');
@@ -29,7 +28,7 @@ async function monitorOutbox() {
             await dbs[i[Dao.outbox.recipient]].startTransaction();
         } catch (error) {
             console.log('error in start transaction outbox ' + error);
-            break;
+            continue;
         }
 
         await dbs[i[Dao.outbox.recipient]]
@@ -57,17 +56,16 @@ async function monitorOutbox() {
                 console.log('error in outbox: ' + error);
             });
     }
-    releaseConnections(dbs);
-    setTimeout(monitorOutbox, INTERVAL);
+    setTimeout(monitorOutbox, INTERVAL, dbs);
 }
 
-async function monitorInbox() {
-    let dbs = await getConnections();
+async function monitorInbox(dbs) {
     const query = `SELECT * 
                     FROM ${Dao.tables.inbox} 
                     WHERE ${Dao.inbox.status} =  ?
                     ORDER BY ${Dao.inbox.id} ASC`;
     let messages;
+
     try {
         await dbs[nodeNum].startTransaction();
         messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Retrieves the list of unacknowledged messages in the inbox
@@ -75,7 +73,7 @@ async function monitorInbox() {
         await dbs[nodeNum].commit();
     } catch (error) {
         console.log('MONITOR INBOX: ' + error);
-        setTimeout(monitorInbox, INTERVAL);
+        setTimeout(monitorInbox, INTERVAL, dbs);
         return;
     }
 
@@ -112,8 +110,7 @@ async function monitorInbox() {
                 //If the current nodeNum is down, it can be implied that the transaction is unsuccessful and an automatic rollback was executed
             });
     }
-    releaseConnections(dbs);
-    setTimeout(monitorInbox, INTERVAL);
+    setTimeout(monitorInbox, INTERVAL, dbs);
 }
 
 /**
@@ -230,8 +227,33 @@ const db = {
     connect: async function (node) {
         nodeNum = node;
         for (let i = 0; i < 3; i++) pools.push(mysql.createPool(Dao.NODES[i]));
-        monitorOutbox();
-        await monitorInbox();
+        let messagingPoolSettings = Dao.NODES.map(function (value) {
+            let temp = {...value}
+            temp.connectionLimit = 2;
+            return temp;
+        });
+        let messagingPools = messagingPoolSettings.map(function(value) {
+            return mysql.createPool(value);
+        })
+
+        let daos1 = {
+            1: new Dao(0),
+            2: new Dao(1),
+            3: new Dao(2),
+        }
+
+        let daos2 = {
+            1: new Dao(0),
+            2: new Dao(1),
+            3: new Dao(2),
+        }
+
+        Promise.allSettled(Object.values(daos1).concat(Object.values(daos2)).map(function(value) {
+            return value.initialize(messagingPools[0]).catch((error) =>{console.log(error);})
+        }));
+
+        monitorOutbox(daos1);
+        await monitorInbox(daos2);
     },
 
     // TODO: Configure the node and target the special scenario of either sending two messages, or sending to node 1 first
