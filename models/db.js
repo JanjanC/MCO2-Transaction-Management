@@ -214,6 +214,8 @@ const db = {
 
         // If able to write a message for all failed sites, commit transations
         try {
+            if (workingSites.length == 0)
+                throw new Error("All sites are down :/")
             for (let i of workingSites) dbs[i].commit();
             callback(index);
         } catch (error) {
@@ -417,6 +419,8 @@ const db = {
 
         // If able to write a message for all failed sites, commit transations
         try {
+            if (workingSites.length == 0)
+                throw new Error("All sites are down :/")
             for (let i of workingSites) dbs[i].commit();
             callback(index);
         } catch (error) {
@@ -479,6 +483,8 @@ const db = {
 
         // If able to write a message for all failed sites, commit transations
         try {
+            if (workingSites.length == 0)
+                throw new Error("All sites are down :/")
             for (let i of workingSites) dbs[i].commit();
             callback(true);
         } catch (error) {
