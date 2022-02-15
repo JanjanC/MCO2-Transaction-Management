@@ -4,7 +4,7 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 90000;
+const INTERVAL = 60000;
 
 var nodeNum;
 let pools = [];
@@ -137,6 +137,10 @@ function releaseConnections(dbs) {
     for (let i = 1; i <= 3; i++) {
         if (dbs[i].connection && !dbs[i].isDown) {
             try {
+                if (dbs[i].isDown)
+                    Dao.NODES[i - 1].connectTimeout = 2.5;
+                else 
+                    Dao.NODES[i - 1].connectTimeout = 3;
                 dbs[i].connection.release();
             } catch (error) {
                 console.log('realase connection error: ' + error.stack);
