@@ -268,8 +268,9 @@ const db = {
             let nodesToFind = [2, 3].map(function (value) {
                 return dbs[value].find(id).then(async function (result) {
                     console.log('db ' + value + ' got result ' + JSON.stringify(result));
+                    console.log(await dbs[1].query("SELECT @@transaction_isolation;"));
                     if (typeof result !== 'undefined' && result.length == 0) return Promise.reject('Did not find');
-                    await dbs[value].commit(id);
+                    await dbs[value].commit();
                     return Promise.resolve(result);
                 });
             });
