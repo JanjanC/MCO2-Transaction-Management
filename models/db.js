@@ -4,7 +4,7 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 30000;
+const INTERVAL = 90000;
 
 var nodeNum;
 let pools = [];
