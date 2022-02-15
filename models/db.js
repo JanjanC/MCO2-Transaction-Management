@@ -4,9 +4,7 @@ const mysql = require('mysql');
 
 dotenv.config();
 
-const INTERVAL = 45000;
-const downSites = new Set();
-let recoveryMode = false;
+const INTERVAL = 60000;
 
 var nodeNum;
 let pools = [];
@@ -20,7 +18,7 @@ async function monitorOutbox() {
         messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Fetch all the UNACKNOWLEDGED rows
         await dbs[nodeNum].commit();
     } catch {
-        setTimeout(monitorOutbox, INTERVAL + 45000);
+        setTimeout(monitorOutbox, INTERVAL);
         return;
     }
     //console.log('data');
@@ -77,7 +75,7 @@ async function monitorInbox() {
         await dbs[nodeNum].commit();
     } catch (error) {
         console.log('MONITOR INBOX: ' + error);
-        setTimeout(monitorInbox, INTERVAL + (recoveryMode ? -40000 : 45000));
+        setTimeout(monitorInbox, INTERVAL);
         return;
     }
 
@@ -128,14 +126,7 @@ async function getConnections() {
         dbs[i] = new Dao(i - 1);
         inits.push(dbs[i].initialize(pools[i - 1]));
     }
-    let results = await Promise.allSettled(inits);
-    downSites.forEach(function(value) {
-        dbs[value].killConnection();
-    })
-    if (downSites.has(nodeNum) && results[nodeNum - 1].status == "fulfilled")
-        recoveryMode = true;
-    else
-        recoveryMode = false;
+    await Promise.allSettled(inits);
     return dbs;
 }
 
@@ -162,11 +153,8 @@ async function sendMessages (results, dbs, query) {
     let failedSites = [];
     let workingSites = [];
     for (let i of results) {
-        if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) {
-            failedSites.push(i.reason);
-            downSites.add(i.reason);
-            //else if (i.status == 'rejected') workingSites.push(i.reason);
-        }
+        if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) failedSites.push(i.reason);
+        //else if (i.status == 'rejected') workingSites.push(i.reason);
         else workingSites.push(i.value);
     }
 
