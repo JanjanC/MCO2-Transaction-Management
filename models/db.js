@@ -1,5 +1,4 @@
 const dotenv = require('dotenv');
-const util = require('util');
 const { Dao } = require('../models/dao');
 const mysql = require('mysql');
 
@@ -145,6 +144,59 @@ function releaseConnections(dbs) {
     }
 }
 
+async function sendMessages (results, dbs) {
+    let failedSites = [];
+    let workingSites = [];
+    for (i of results) {
+        if (i.status == 'rejected') failedSites.push(i.reason);
+        else workingSites.push(i.value);
+    }
+
+    console.log('failed sites: ' + failedSites);
+    console.log('working sites: ' + workingSites);
+
+    let inboxQuery = `INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
+                        VALUES(?, ?, ?, ?)`;
+
+    // For each failed site, try to write to outbox, if unable rollback everything and send error
+    for (let i of failedSites) {
+        let messagesToSend = workingSites.map(function (index) {
+            return dbs[index].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]);
+        });
+        let sentAny = false;
+        await Promise.allSettled(messagesToSend).forEach(function (result) {
+            if (result.status == "rejected")
+                console.log(result.reason);
+            else
+                sentAny = true
+        });
+        if (!sentAny)
+            break;
+    }
+
+    let rollbackAll = workingSites.map(function(value) {
+        return dbs[i].rollback()
+    })
+
+    if (sentAny) {
+        try {
+            let commitAll = workingSites.map(function(value) {
+                return dbs[i].commit()
+            })
+            await Promise.all(commitAll);
+            return (true);
+        } catch (error) {
+            console.log(error);
+            await Promise.allSettled(rollbackAll);           
+            return false;
+        }
+    }
+    else {
+        await Promise.allSettled(rollbackAll);
+        return false;
+    }
+}
+
 const db = {
     /*
     node - the current node number of the server
@@ -177,51 +229,14 @@ const db = {
         });
 
         let results = await Promise.allSettled(nodesToInsert);
-
-        // Splits the results into the two arrays of node numbers depending on whether they failed
-        // eg. failedSites = [0, 3]; workingSites = [1]
-        let failedSites = [];
-        let workingSites = [];
-        for (i of results) {
-            if (i.status == 'rejected') failedSites.push(i.reason);
-            else workingSites.push(i.value);
-        }
-
-        console.log('failed sites: ' + failedSites);
-        console.log('working sites: ' + workingSites);
-
-        let inboxQuery = `INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
-                          VALUES(?, ?, ?, ?)`;
-
-        // For each failed site, try to write to outbox, if unable rollback everything and send error
-        for (let i of failedSites) {
-            let messagesToSend = [];
-            for (let j of workingSites) messagesToSend.push(dbs[j].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]));
-
-            await Promise.any(messagesToSend).catch(function (error) {
-                console.log(error.message);
-                for (let j of workingSites) {
-                    try {
-                        dbs[j].rollback();
-                    } catch {
-                        break;
-                    }
-                }
-                callback(0);
-                return;
-            });
-        }
-
-        // If able to write a message for all failed sites, commit transations
-        try {
-            for (let i of workingSites) dbs[i].commit();
+        if (sendMessages(results, dbs)) {
+            releaseConnections(dbs);
             callback(index);
-        } catch (error) {
-            console.log(error);
+        }
+        else {
+            releaseConnections(dbs);
             callback(0);
         }
-
-        releaseConnections(dbs);
     },
 
     find: async function (id, callback) {
@@ -381,50 +396,14 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        // Splits the results into the two arrays of node numbers depending on whether they failed
-        // eg. failedSites = [0, 3]; workingSites = [1]
-        let failedSites = [];
-        let workingSites = [];
-        for (i of results) {
-            if (i.status == 'rejected') failedSites.push(i.reason);
-            else workingSites.push(i.value);
-        }
-
-        console.log('failed sites: ' + failedSites);
-        console.log('working sites: ' + workingSites);
-
-        let inboxQuery = `INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
-                          VALUES(?, ?, ?, ?)`;
-
-        // For each failed site, try to write to outbox, if unable rollback everything and send error
-        for (let i of failedSites) {
-            let messagesToSend = [];
-            for (let j of workingSites) messagesToSend.push(dbs[j].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]));
-
-            await Promise.any(messagesToSend).catch(function (error) {
-                console.log(error.message);
-                for (let j of workingSites) {
-                    try {
-                        dbs[j].rollback();
-                    } catch {
-                        break;
-                    }
-                }
-                callback(0);
-                return;
-            });
-        }
-
-        // If able to write a message for all failed sites, commit transations
-        try {
-            for (let i of workingSites) dbs[i].commit();
+        if (sendMessages(results, dbs)) {
+            releaseConnections(dbs);
             callback(index);
-        } catch (error) {
-            console.log(error);
+        }
+        else {
+            releaseConnections(dbs);
             callback(0);
         }
-
-        releaseConnections(dbs);
     },
 
     delete: async function (id, callback) {
@@ -446,47 +425,14 @@ const db = {
 
         let results = await Promise.allSettled(nodesToInsert);
 
-        // Splits the results into the two arrays of node numbers depending on whether they failed
-        // eg. failedSites = [0, 3]; workingSites = [1]
-        let failedSites = [];
-        let workingSites = [];
-        for (i of results) {
-            if (i.status == 'rejected') failedSites.push(i.reason);
-            else workingSites.push(i.value);
+        if (sendMessages(results, dbs)) {
+            releaseConnections(dbs);
+            callback(index);
         }
-
-        console.log('failed sites: ' + failedSites);
-        console.log('working sites: ' + workingSites);
-
-        let inboxQuery = `INSERT INTO ${Dao.tables.outbox} (${Dao.outbox.id}, ${Dao.outbox.recipient}, ${Dao.outbox.message}, ${Dao.outbox.status})
-                          VALUES(?, ?, ?, ?)`;
-
-        let stopFunction = false;
-        // For each failed site, try to write to outbox, if unable rollback everything and send error
-        for (let i of failedSites) {
-            if (stopFunction) return;
-            let messagesToSend = [];
-            for (let j of workingSites) messagesToSend.push(dbs[j].query(inboxQuery, [new Date().getTime(), i, query, Dao.MESSAGES.UNACKNOWLEDGED]));
-
-            await Promise.any(messagesToSend).catch(function (error) {
-                console.log(error.message);
-                for (let j of workingSites) dbs[j].rollback();
-                stopFunction = true;
-                callback(false);
-                return;
-            });
+        else {
+            releaseConnections(dbs);
+            callback(0);
         }
-
-        // If able to write a message for all failed sites, commit transations
-        try {
-            for (let i of workingSites) dbs[i].commit();
-            callback(true);
-        } catch (error) {
-            console.log(error);
-            callback(false);
-        }
-
-        releaseConnections(dbs);
     },
 
     generateReport: async function (callback) {
