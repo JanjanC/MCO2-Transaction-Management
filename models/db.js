@@ -372,6 +372,7 @@ const db = {
                 .update(...params)
                 .then(function (result) {
                     query = dbs[value].lastSQLObject.sql;
+                    throw new Error("fail for testing >:]");
                     return Promise.resolve(value);
                 })
                 .catch(function (error) {
@@ -414,14 +415,16 @@ const db = {
                 return;
             });
         }
-
+        
         // If able to write a message for all failed sites, commit transations
         try {
+            if (workingSites.length == 0)
+                throw new Error("All sites are down :/")
             for (let i of workingSites) dbs[i].commit();
             callback(index);
         } catch (error) {
             console.log(error);
-            callback(0);
+            setTimeout(callback(0), 7500);
         }
 
         releaseConnections(dbs);
