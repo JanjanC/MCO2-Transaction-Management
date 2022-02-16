@@ -302,7 +302,7 @@ const db = {
     // TODO: Configure the node and target the special scenario of either sending two messages, or sending to node 1 first
     insert: async function (name, year, rating, genre, director, actor_1, actor_2, callback) {
         let dbs = await getConnections();
-        let params = [new Date().getTime(), name, year, rating, genre, director, actor_1, actor_2];
+        let params = ["" + new Date().getTime() + Math.floor(100 + Math.random() * 900), name, year, rating, genre, director, actor_1, actor_2];
         let query = '';
         let index = params[0];
 
