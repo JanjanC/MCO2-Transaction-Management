@@ -12,7 +12,7 @@ var nodeNum;
 let pools = [];
 
 async function monitorOutbox() {
-    let dbs = await getConnections();
+    let dbs = await getConnections(true);
     const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
     let messages;
     let queryIfUpToDate = `
@@ -83,7 +83,7 @@ async function monitorOutbox() {
 }
 
 async function monitorInbox() {
-    let dbs = await getConnections();
+    let dbs = await getConnections(true);
     const query = `SELECT * 
                     FROM ${Dao.tables.inbox} 
                     WHERE ${Dao.inbox.status} =  ?
@@ -164,7 +164,7 @@ async function monitorInbox() {
 /**
  * Creates new pool connections so as to avoid the issue of having "shared" connections
  */
-async function getConnections() {
+async function getConnections(enableDownSites = false) {
     let dbs = {};
     let inits = [];
     for (let i = 1; i <= 3; i++) {
@@ -172,15 +172,17 @@ async function getConnections() {
         inits.push(dbs[i].initialize(pools[i - 1]));
     }
     let results = await Promise.allSettled(inits);
-    downSites.forEach(function(value) {
-        dbs[value].killConnection();
-    })
+    if (!enableDownSites) {
+        downSites.forEach(function(value) {
+            dbs[value].killConnection();
+        })
+    }
     if (downSites.has(nodeNum) && results[nodeNum - 1].status == "fulfilled") {
-        console.log("Entering recovery mode");
+        console.log("NODE #" + nodeNum + " has entered recovery mode");
         recoveryMode = true;
     }
     else {
-        console.log("Exiting recovery mode");
+        console.log("NODE #" + nodeNum + " is not is recovery mode");
         recoveryMode = false;
     }
     return dbs;
@@ -209,11 +211,8 @@ async function sendMessages (results, dbs, query) {
     let failedSites = [];
     let workingSites = [];
     for (let i of results) {
-        if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) {
-            failedSites.push(i.reason);
-            downSites.add(i.reason);
+        if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) failedSites.push(i.reason);
             //else if (i.status == 'rejected') workingSites.push(i.reason);
-        }
         else workingSites.push(i.value);
     }
     console.log('working sites: ' + downSites)
@@ -249,6 +248,7 @@ async function sendMessages (results, dbs, query) {
                 return dbs[value].commit()
             })
             console.log("committed")
+            failedSites.forEach (value => downSites.add(i.reason)) ;
             await Promise.all(commitAll);
             return true;
         } catch (error) {
