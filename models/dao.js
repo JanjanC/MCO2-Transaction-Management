@@ -30,7 +30,7 @@ class Dao {
             password: 'password.12345',
             database: 'imdb_ijs',
             connectionLimit: 30,
-            connectTimeout: 3000,
+            connectTimeout: 20000,
         },
     ];
     static MESSAGES = {
@@ -140,16 +140,6 @@ class Dao {
         });
     }
 
-    killConnection() {
-        console.log('Killed conection for Node ' + (this.node + 1));
-        this.query = (query, options) => {
-            console.log('fake query in node ' + (this.node + 1) + ': ' + query);
-            console.log('\twith values: ' + JSON.stringify(options));
-            return Promise.reject(Dao.MESSAGES.UNCONNECTED);
-        };
-        this.isDown = true;
-    }
-
     insert(id, name, year, rating, genre, director, actor_1, actor_2) {
         rating = rating ? rating : null;
         genre = genre ? genre : null;
@@ -175,55 +165,53 @@ class Dao {
         actor_1 = actor_1 ? actor_1 : null;
         actor_2 = actor_2 ? actor_2 : null;
         director = director ? director : null;
-        
+
         let query = `INSERT INTO ${Dao.tables.imdb} (${Dao.imdb.id}, ${Dao.imdb.name}, ${Dao.imdb.year}, ${Dao.imdb.rating}, ${Dao.imdb.genre}, ${Dao.imdb.director}, ${Dao.imdb.actor_1}, ${Dao.imdb.actor_2})
             VALUES(?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE 
         `;
-        
+
         let changedValues = [];
         if (changed.movie_name) {
-            query += `${Dao.imdb.name} = ?`
+            query += `${Dao.imdb.name} = ?`;
             changedValues.push(name);
         }
         if (changed.year) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.year} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.year} = ?`;
             changedValues.push(year);
         }
         if (changed.rating) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.rating} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.rating} = ?`;
             changedValues.push(rating);
         }
         if (changed.genre) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.genre} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.genre} = ?`;
             changedValues.push(genre);
         }
         if (changed.director) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.director} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.director} = ?`;
             changedValues.push(director);
         }
         if (changed.actor_1) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.actor_1} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.actor_1} = ?`;
             changedValues.push(actor_1);
         }
         if (changed.actor_2) {
-            if (query.slice(-1) == "?") query += ", "
-            query += `${Dao.imdb.actor_2} = ?`
+            if (query.slice(-1) == '?') query += ', ';
+            query += `${Dao.imdb.actor_2} = ?`;
             changedValues.push(actor_2);
         }
         if (Object.values(changed).indexOf(true) == -1) {
-            query += `${Dao.imdb.id} = ?`
+            query += `${Dao.imdb.id} = ?`;
             changedValues.push(id);
         }
         return this.query('START TRANSACTION;').then((result) => {
-            return this.query(query,
-                [id, name, year, rating, genre, director, actor_1, actor_2, ...changedValues]
-            );
+            return this.query(query, [id, name, year, rating, genre, director, actor_1, actor_2, ...changedValues]);
         });
     }
 
