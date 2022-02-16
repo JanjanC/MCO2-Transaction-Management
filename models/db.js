@@ -559,6 +559,7 @@ const db = {
                 let repeatedGenres = {}
                 let newArray = []
                 for (let i of array) {
+                    console.log(i);
                     if (Object.keys(repeatedGenres).indexOf(i.genre)) {
                         if (i.count)
                             newArray[repeatedGenres[i.genre]] += i.count;
@@ -596,7 +597,7 @@ const db = {
                     await Promise.all([dbs[index][2].commit(), dbs[index][3].commit()]);
                     console.log('----->' + JSON.stringify(result[0]));
                     console.log('----->' + JSON.stringify(result[1]));
-                    return Promise.resolve(combinedItems(result[0].concat(result[1]), query));
+                    return Promise.resolve(combinedItems(result[0].concat(result[1]), value));
                 });
             });
             return Promise.allSettled(execs);
