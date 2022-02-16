@@ -1,0 +1,69 @@
+<html lang='en'>
+    <head>
+        <link rel='stylesheet' href='../assets/lib/bootstrap/css/bootstrap.min.css' />
+
+        <link rel='stylesheet' href='../assets/lib/font-awesome/css/all.css' />
+        <link rel='stylesheet' href='../assets/styles/index.css' />
+
+        <script type='text/javascript' src='../assets/lib/popper/popper.js'></script>
+        <script type='text/javascript' src='../assets/lib/jquery/jquery-3.6.0.js'></script>
+        <script type='text/javascript' src='../assets/lib/bootstrap/js/bootstrap.bundle.min.js'></script>
+
+        <script type='text/javascript' src='../assets/scripts/index.js'></script>
+        <title>Database Reports</title>
+    </head>
+    <body>
+        <div class='container h-100 w-100 p-5 mb-4'>
+            <a href='../' class='h1'><i class='fas fa-arrow-left'></i></a><span class='h1 ml-3'>REPORT</span>
+
+            <div class='d-flex row my-4 justify-content-between'>
+                <div class='col-6'>
+                    <div class='mt-3 mb-4'>
+                        <h4 class="report-header">Total Movie Count:</h4>
+                        {{#each tot_movies}}
+                            <h5 class='.ml-4'><span class="report-value">{{this.count}}</span></h5>
+                        {{/each}}
+                    </div>
+
+                    <h4 class="report-header">Total Number of Movies Per Year:</h4>
+                    <div class='overflow-auto report border p-3'>
+                        {{#each tot_per_year}}
+                            <h5 class='.ml-4'>{{this.year}}: <span class="report-value">{{this.count}}</span></h5>
+                        {{/each}}
+                    </div>
+
+                    <h4 class="report-header">Total Number of Movies Per Genre:</h4>
+                    <div class='overflow-auto report border p-3'>
+                        {{#each tot_per_genre}}
+                            <h5 class='.ml-4'>{{#if this.genre}}<span class="report-item">{{this.genre}}</span>{{else}}No Genre{{/if}}: <span class="report-value">{{this.count}}</span></h5>
+                        {{/each}}
+                    </div>
+                </div>
+
+                <div class='col-6'>
+                    <div class='mt-3 mb-4'>
+                        <h4 class="report-header">Average Rating of All Movies:</h4>
+                        {{#each avg_rating}}
+                            <h5 class='.ml-4'>{{#if this.avg}}<span class="report-value">{{this.avg}}</span>{{else}}<span class="report-empty">No Data</span>{{/if}}</h5>
+                        {{/each}}
+                    </div>
+
+                    <h4 class="report-header">Average Rating Per Year:</h4>
+                    <div class='overflow-auto report border p-3'>
+                        {{#each avg_per_year}}
+                            <h5 class='.ml-4'>{{this.year}}: {{#if this.avg}}<span class="report-value">{{this.avg}}</span>{{else}}<span class="report-empty">No Data</span>{{/if}}</h5>
+                        {{/each}}
+                    </div>
+
+                    <h4 class="report-header">Average Rating Per Genre:</h4>
+                    <div class='overflow-auto report border p-3'>
+                        {{#each avg_per_genre}}
+                            <h5 class='.ml-4'>{{#if this.genre}}<span class="report-item">{{this.genre}}</span>{{else}}null{{/if}}:
+                                {{#if this.avg}}<span class="report-item">{{this.avg}}</span>{{else}}<span class="report-empty">No Data</span>{{/if}}</h5>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

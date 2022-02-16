@@ -12,6 +12,13 @@
         <div class='container h-100 w-100 p-3 my-4'>
             <a href='../' class='h1'><i class='fas fa-arrow-left'></i></a><span class="h1 ml-3">EDIT MOVIE</span>
             <form action='/edit/{{id}}' method="POST" id="form" onsubmit="return validateInput()">
+            <input name="old-name" value="{{name}}" type="hidden" />
+            <input name="old-year" value="{{year}}" type="hidden" />
+            <input name="old-rating" value="{{rating}}" type="hidden" />
+            <input name="old-genre" value="{{genre}}" type="hidden" />
+            <input name="old-director" value="{{director}}" type="hidden" />
+            <input name="old-actor-1" value="{{actor_1}}" type="hidden" />
+            <input name="old-actor-2" value="{{actor_2}}" type="hidden" />
             <div class='p-4 my-4 border rounded' id='movies-div'>
                 <!--MOVIES-->
                 <div class='p-4 my-4 border rounded' id='movies-div'>
