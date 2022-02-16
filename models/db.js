@@ -293,6 +293,8 @@ const db = {
     connect: async function (node) {
         nodeNum = node;
         for (let i = 0; i < 3; i++) pools.push(mysql.createPool(Dao.NODES[i]));
+        if (process.argv[2] == "recovery")
+            downSites.add(nodeNum); // boot up script with recovery
         monitorOutbox();
         await monitorInbox();
     },
