@@ -15,14 +15,32 @@ async function monitorOutbox() {
     let dbs = await getConnections();
     const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
     let messages;
+    let queryIfUpToDate = `
+        SELECT * FROM ${Dao.tables.outbox}
+        WHERE (${Dao.outbox.status} = ? OR ${Dao.outbox.status} = ?) AND
+            ${Dao.outbox.recipient} = ?
+    `;
+    
     try {
         await dbs[nodeNum].startTransaction();
         messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Fetch all the UNACKNOWLEDGED rows
+        let reopenedSites = []
+        downSites.forEach(async function(value) {
+            if (value != nodeNum) {
+                let result = await dbs[nodeNum].query(queryIfUpToDate, [Dao.MESSAGES.UNACKNOWLEDGED, Dao.MESSAGES.SENT, value])
+                if (result.length == 0)
+                    reopenedSites.push(value);
+            }
+        })
+        reopenedSites.forEach(function(value) {
+            downSites.delete(value);
+        })
         await dbs[nodeNum].commit();
     } catch {
         setTimeout(monitorOutbox, INTERVAL + 45000);
         return;
     }
+
     //console.log('data');
     for (let i of messages) {
         //console.log(i);
@@ -80,7 +98,6 @@ async function monitorInbox() {
         setTimeout(monitorInbox, INTERVAL + (recoveryMode ? -40000 : 45000));
         return;
     }
-
     //Messages contains all queued up to go transactions
     //For each unacknowledged message
     for (let i of messages) {
@@ -113,6 +130,29 @@ async function monitorInbox() {
                 console.log('catch monitor inbox ' + error);
                 //If the current nodeNum is down, it can be implied that the transaction is unsuccessful and an automatic rollback was executed
             });
+    }
+    let queryIfUpToDate = `
+        SELECT * FROM ${Dao.tables.outbox}
+        WHERE (${Dao.outbox.status} = ? OR ${Dao.outbox.status} = ?) AND
+            ${Dao.outbox.recipient} = ?
+    `;
+    if (recoveryMode) {
+        let numPendingMessages = 0;
+        try {
+            [1, 2, 3].filter((number) => number != nodeNum).forEach(async function(value) {
+                dbs[value].startTransaction();
+                let result = await dbs[value].query(queryIfUpToDate, [Dao.MESSAGES.UNACKNOWLEDGED, Dao.MESSAGES.SENT, nodeNum])
+                dbs[value].commit();
+                numPendingMessages += result;
+            })
+        }
+        catch (error) {
+            console.log(error);
+            console.log("error contacting other sites while in recovery mode");
+            return;
+        }
+        if (numPendingMessages == 0)
+            downSites.delete(nodeNum);
     }
     releaseConnections(dbs);
     setTimeout(monitorInbox, INTERVAL);
