@@ -10,17 +10,36 @@ var nodeNum;
 let pools = [];
 
 async function monitorOutbox() {
-    let dbs = await getConnections();
+    let dbs = await getConnections(true);
     const query = `SELECT * FROM ${Dao.tables.outbox} WHERE ${Dao.outbox.status} = ?`;
     let messages;
+    let queryIfUpToDate = `
+        SELECT * FROM ${Dao.tables.outbox}
+        WHERE (${Dao.outbox.status} = ? OR ${Dao.outbox.status} = ?) AND
+            ${Dao.outbox.recipient} = ?
+    `;
+    
     try {
         await dbs[nodeNum].startTransaction();
         messages = await dbs[nodeNum].query(query, [Dao.MESSAGES.UNACKNOWLEDGED]); //Fetch all the UNACKNOWLEDGED rows
+        let reopenedSites = []
+        downSites.forEach(async function(value) {
+            if (value != nodeNum) {
+                let result = await dbs[nodeNum].query(queryIfUpToDate, [Dao.MESSAGES.UNACKNOWLEDGED, Dao.MESSAGES.SENT, value])
+                if (result.length == 0)
+                    reopenedSites.push(value);
+            }
+        })
+        reopenedSites.forEach(function(value) {
+            console.log("setting node " + value + " as not down")
+            downSites.delete(value);
+        })
         await dbs[nodeNum].commit();
     } catch {
         setTimeout(monitorOutbox, INTERVAL);
         return;
     }
+
     //console.log('data');
     for (let i of messages) {
         //console.log(i);
@@ -62,7 +81,7 @@ async function monitorOutbox() {
 }
 
 async function monitorInbox() {
-    let dbs = await getConnections();
+    let dbs = await getConnections(true);
     const query = `SELECT * 
                     FROM ${Dao.tables.inbox} 
                     WHERE ${Dao.inbox.status} =  ?
@@ -78,7 +97,6 @@ async function monitorInbox() {
         setTimeout(monitorInbox, INTERVAL);
         return;
     }
-
     //Messages contains all queued up to go transactions
     //For each unacknowledged message
     for (let i of messages) {
@@ -112,6 +130,31 @@ async function monitorInbox() {
                 //If the current nodeNum is down, it can be implied that the transaction is unsuccessful and an automatic rollback was executed
             });
     }
+    let queryIfUpToDate = `
+        SELECT * FROM ${Dao.tables.outbox}
+        WHERE (${Dao.outbox.status} = ? OR ${Dao.outbox.status} = ?) AND
+            ${Dao.outbox.recipient} = ?
+    `;
+    if (recoveryMode) {
+        let numPendingMessages = 0;
+        try {
+            [1, 2, 3].filter((number) => number != nodeNum).forEach(async function(value) {
+                dbs[value].startTransaction();
+                let result = await dbs[value].query(queryIfUpToDate, [Dao.MESSAGES.UNACKNOWLEDGED, Dao.MESSAGES.SENT, nodeNum])
+                dbs[value].commit();
+                numPendingMessages += result;
+            })
+        }
+        catch (error) {
+            console.log(error);
+            console.log("error contacting other sites while in recovery mode");
+            return;
+        }
+        if (numPendingMessages == 0) {
+            console.log("setting node " + nodeNum + " as not down")
+            downSites.delete(nodeNum);
+        }
+    }
     releaseConnections(dbs);
     setTimeout(monitorInbox, INTERVAL);
 }
@@ -119,14 +162,27 @@ async function monitorInbox() {
 /**
  * Creates new pool connections so as to avoid the issue of having "shared" connections
  */
-async function getConnections() {
+async function getConnections(enableDownSites = false) {
     let dbs = {};
     let inits = [];
     for (let i = 1; i <= 3; i++) {
         dbs[i] = new Dao(i - 1);
         inits.push(dbs[i].initialize(pools[i - 1]));
     }
-    await Promise.allSettled(inits);
+
+    let results = await Promise.allSettled(inits);
+    if (!enableDownSites) {
+        downSites.forEach(function(value) {
+            dbs[value].killConnection();
+        })
+    }
+    if (downSites.has(nodeNum) && results[nodeNum - 1].status == "fulfilled") {
+        console.log("NODE #" + nodeNum + " has entered recovery mode");
+        recoveryMode = true;
+    }
+    else {
+        console.log("NODE #" + nodeNum + " is not is recovery mode");
+        recoveryMode = false;
     return dbs;
 }
 
@@ -152,10 +208,10 @@ async function sendMessages(results, dbs, query) {
     let workingSites = [];
     for (let i of results) {
         if (i.status == 'rejected' /*&& dbs[i.reason].isDown*/) failedSites.push(i.reason);
-        //else if (i.status == 'rejected') workingSites.push(i.reason);
+            //else if (i.status == 'rejected') workingSites.push(i.reason);
         else workingSites.push(i.value);
     }
-
+    console.log('working sites: ' + downSites)
     console.log('failed sites: ' + failedSites);
     console.log('working sites: ' + workingSites);
 
@@ -181,10 +237,11 @@ async function sendMessages(results, dbs, query) {
 
     if (sentAny) {
         try {
-            let commitAll = workingSites.map(function (value) {
-                return dbs[value].commit();
-            });
-            console.log('committed');
+            let commitAll = workingSites.map(function(value) {
+                return dbs[value].commit()
+            })
+            console.log("committed")
+            failedSites.forEach (value => downSites.add(i.reason)) ;
             await Promise.all(commitAll);
             return true;
         } catch (error) {
@@ -228,6 +285,8 @@ const db = {
     connect: async function (node) {
         nodeNum = node;
         for (let i = 0; i < 3; i++) pools.push(mysql.createPool(Dao.NODES[i]));
+        if (process.argv[2] == "recovery")
+            downSites.add(nodeNum); // boot up script with recovery
         monitorOutbox();
         await monitorInbox();
     },
