@@ -33,6 +33,7 @@ async function monitorOutbox() {
             }
         })
         reopenedSites.forEach(function(value) {
+            console.log("setting node " + value + " as not down")
             downSites.delete(value);
         })
         await dbs[nodeNum].commit();
@@ -151,8 +152,10 @@ async function monitorInbox() {
             console.log("error contacting other sites while in recovery mode");
             return;
         }
-        if (numPendingMessages == 0)
+        if (numPendingMessages == 0) {
+            console.log("setting node " + nodeNum + " as not down")
             downSites.delete(nodeNum);
+        }
     }
     releaseConnections(dbs);
     setTimeout(monitorInbox, INTERVAL);
@@ -172,10 +175,14 @@ async function getConnections() {
     downSites.forEach(function(value) {
         dbs[value].killConnection();
     })
-    if (downSites.has(nodeNum) && results[nodeNum - 1].status == "fulfilled")
+    if (downSites.has(nodeNum) && results[nodeNum - 1].status == "fulfilled") {
+        console.log("Entering recovery mode");
         recoveryMode = true;
-    else
+    }
+    else {
+        console.log("Exiting recovery mode");
         recoveryMode = false;
+    }
     return dbs;
 }
 
@@ -209,7 +216,7 @@ async function sendMessages (results, dbs, query) {
         }
         else workingSites.push(i.value);
     }
-
+    console.log('working sites: ' + downSites)
     console.log('failed sites: ' + failedSites);
     console.log('working sites: ' + workingSites);
 
