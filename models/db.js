@@ -544,38 +544,48 @@ const db = {
         };
 
         const combinedItems = (array, query) => {
+            console.log(query);
+            try {
             if (query == allQueries.tot_per_year || query == allQueries.avg_per_year) {
                 return array;
             }
             else if (query == allQueries.tot_movies || query == allQueries.avg_rating) {
-                return array.reduce(function (prev, i) {
-                    if (i.count)
-                        return prev + i.count;
-                    else
+                if (array[0].count) {
+                    return [{count: array.reduce(function (prev, i) {
+                            return prev + i.count;
+                    }, 0)}];
+                }
+                else {
+                    return [{avg: array.reduce(function (prev, i) {
                         return prev + i.avg;
-                }, 0);
+                    }, 0)}];
+                }
             }
             else {
                 let repeatedGenres = {}
                 let newArray = []
                 for (let i of array) {
                     console.log(i);
-                    if (Object.keys(repeatedGenres).indexOf(i.genre)) {
+                    if (Object.keys(repeatedGenres).indexOf(i.genre) != -1) {
                         if (i.count)
-                            newArray[repeatedGenres[i.genre]] += i.count;
+                            newArray[repeatedGenres[i.genre]].count += i.count;
                         else
-                            newArray[repeatedGenres[i.genre]] += i.avg;
+                            newArray[repeatedGenres[i.genre]].avg += i.avg;
                     }
                     else {
                         if (i.count)
-                            newArray.push({}[i.genre] = i.count);
+                            newArray.push({genre: i.genre, count: i.count});
                         else
-                            newArray.push({}[i.genre] = i.avg);
+                            newArray.push({genre: i.genre, avg: i.avg});
                         repeatedGenres[i.genre] = newArray.length - 1;
                     }
                 }
+                console.log("-------------------------->>" + JSON.stringify(newArray));
                 return newArray; // return combined genre counts
             }
+        }catch (error) {
+            throw console.log(error.stack);
+        }
         };
 
         let dbs = [];
